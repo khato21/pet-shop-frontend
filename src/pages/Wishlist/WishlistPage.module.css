@@ -1,0 +1,280 @@
+.page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  padding: 50px 40px 80px;
+
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+
+  color: #4a4a4a;
+
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+.removeButton,
+.addAllButton {
+  height: 44px;
+
+  padding: 0 24px;
+
+  background: transparent;
+
+  border: 1px solid #d8d8d8;
+  border-radius: 4px;
+
+  color: #555555;
+
+  font-size: 13px;
+  font-weight: 400;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.removeButton:hover {
+  background: #e5ae68;
+
+  border-color: #e5ae68;
+
+  color: #ffffff;
+}
+
+.addAllButton {
+  background: #e5ae68;
+
+  border-color: #e5ae68;
+
+  color: #ffffff;
+}
+
+.addAllButton:hover {
+  background: #d99545;
+
+  border-color: #d99545;
+}
+
+/* ========================================
+   CONTINUE SHOPPING
+======================================== */
+
+.continueWrapper {
+  width: 100%;
+
+  display: flex;
+
+  justify-content: center;
+
+  margin-bottom: 40px;
+}
+
+.continueLink {
+  color: #6b6375;
+
+  font-size: 15px;
+  font-weight: 400;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.continueLink:hover {
+  color: #e5ae68;
+
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   WISHLIST
+======================================== */
+
+.list {
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 40px 28px;
+
+  width: 100%;
+}
+
+.emptyMessage {
+  margin: 40px 0 0;
+
+  color: #777777;
+
+  font-size: 18px;
+  font-weight: 400;
+
+  text-align: center;
+}
+
+/* ========================================
+   SCROLL TO TOP
+======================================== */
+
+.scrollTopButton {
+  position: fixed;
+
+  right: 32px;
+  bottom: 32px;
+
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid #e5ae68;
+  border-radius: 50%;
+
+  background: #e5ae68;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.scrollTopButton:hover {
+  background: #d99545;
+
+  border-color: #d99545;
+
+  transform: translateY(-3px);
+
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.scrollTopButton:active {
+  transform: translateY(-1px);
+}
+
+.scrollTopIcon {
+  width: 21px;
+  height: 21px;
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 1000px) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 40px 24px 60px;
+  }
+
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .title {
+    font-size: 36px;
+  }
+
+  .scrollTopButton {
+    right: 24px;
+    bottom: 24px;
+
+    width: 42px;
+    height: 42px;
+  }
+
+  .scrollTopIcon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 30px 16px 50px;
+  }
+
+  .header {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 20px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .removeButton,
+  .addAllButton {
+    flex: 1;
+
+    padding: 0 12px;
+  }
+
+  .list {
+    grid-template-columns: 1fr;
+  }
+
+  .continueWrapper {
+    margin-bottom: 32px;
+  }
+
+  .scrollTopButton {
+    right: 18px;
+    bottom: 18px;
+
+    width: 40px;
+    height: 40px;
+  }
+
+  .scrollTopIcon {
+    width: 19px;
+    height: 19px;
+  }
+}

@@ -1,0 +1,162 @@
+.hero {
+  width: 100%;
+  min-height: calc(100vh - 74px);
+
+  background-color: #fbf3e8;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+
+  overflow: hidden;
+}
+
+.container {
+  width: min(1400px, calc(100% - 72px));
+  min-height: calc(100vh - 74px);
+  margin: 0 auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.content {
+  width: 50%;
+  padding-right: 24px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.offer {
+  margin: 0 0 20px;
+
+  color: #e5ae68;
+
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+}
+
+.title {
+  margin: 0;
+
+  color: #3f3f3f;
+
+  font-size: clamp(54px, 5vw, 82px);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.title span {
+  color: #e5ae68;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+
+  margin-top: 44px;
+  padding: 18px 30px;
+
+  border: 1px solid #4b4b4b;
+  border-radius: 2px;
+
+  background: transparent;
+  color: #4b4b4b;
+
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button span {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.button:hover {
+  background: #3f3f3f;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1000px) {
+  .hero {
+    min-height: 600px;
+  }
+
+  .container {
+    width: min(100% - 40px, 1400px);
+    min-height: 600px;
+  }
+
+  .content {
+    width: 52%;
+  }
+
+  .title {
+    font-size: clamp(46px, 5vw, 68px);
+  }
+}
+
+@media (max-width: 800px) {
+  .hero {
+    min-height: 850px;
+    background-size: auto 850px;
+    background-position: top center;
+  }
+
+  .container {
+    width: min(100% - 32px, 1400px);
+    min-height: 850px;
+
+    align-items: flex-end;
+    justify-content: center;
+
+    padding-bottom: 60px;
+  }
+
+  .content {
+    width: 100%;
+    padding-right: 0;
+
+    align-items: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero {
+    min-height: 720px;
+    background-size: auto 720px;
+  }
+
+  .container {
+    min-height: 720px;
+    padding-bottom: 40px;
+  }
+
+  .offer {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+  }
+
+  .title {
+    font-size: 40px;
+  }
+
+  .button {
+    margin-top: 30px;
+    padding: 14px 24px;
+  }
+}

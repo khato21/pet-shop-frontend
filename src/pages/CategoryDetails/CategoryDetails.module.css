@@ -1,0 +1,217 @@
+.page {
+  min-height: 100vh;
+
+  padding: 56px 24px 80px;
+
+  box-sizing: border-box;
+
+  background: #fffaf2;
+}
+
+.header {
+  width: min(100%, 1100px);
+
+  margin: 0 auto 48px;
+
+  text-align: left;
+}
+
+.title {
+  margin: 0 0 16px;
+
+  color: #3f3f3f;
+
+  font-size: 42px;
+  font-weight: 400;
+}
+
+.description {
+  max-width: 760px;
+
+  margin: 0;
+
+  color: #e5aa5b;
+
+  font-size: 18px;
+  line-height: 1.6;
+
+  text-align: left;
+}
+
+.backLink {
+  display: inline-flex;
+
+  align-items: center;
+
+  margin-top: 18px;
+
+  color: #3f3f3f;
+
+  font-size: 16px;
+  font-weight: 400;
+
+  text-decoration: none;
+}
+
+.list {
+  width: 100%;
+
+  max-width: 1100px;
+
+  margin: 0 auto;
+
+  display: grid;
+
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 34px;
+}
+
+.message {
+  margin: 60px 0;
+
+  color: #777777;
+
+  font-size: 18px;
+
+  text-align: center;
+}
+
+.error {
+  margin: 60px 0;
+
+  color: #dc2626;
+
+  font-size: 18px;
+
+  text-align: center;
+}
+
+/* ========================================
+   SCROLL TO TOP
+======================================== */
+
+.scrollTopButton {
+  position: fixed;
+
+  right: 32px;
+  bottom: 32px;
+
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid #e5ae68;
+  border-radius: 50%;
+
+  background: #e5ae68;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.scrollTopButton:hover {
+  background: #d99545;
+
+  border-color: #d99545;
+
+  transform: translateY(-3px);
+
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.scrollTopButton:active {
+  transform: translateY(-1px);
+}
+
+.scrollTopIcon {
+  width: 21px;
+  height: 21px;
+}
+
+@media (max-width: 1100px) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 42px 20px 60px;
+  }
+
+  .title {
+    font-size: 36px;
+  }
+
+  .description {
+    font-size: 16px;
+  }
+
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 24px;
+  }
+
+  .scrollTopButton {
+    right: 24px;
+    bottom: 24px;
+
+    width: 42px;
+    height: 42px;
+  }
+
+  .scrollTopIcon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: 32px 16px 48px;
+  }
+
+  .header {
+    margin-bottom: 32px;
+  }
+
+  .title {
+    font-size: 30px;
+  }
+
+  .list {
+    grid-template-columns: 1fr;
+
+    gap: 24px;
+  }
+
+  .scrollTopButton {
+    right: 18px;
+    bottom: 18px;
+
+    width: 40px;
+    height: 40px;
+  }
+
+  .scrollTopIcon {
+    width: 19px;
+    height: 19px;
+  }
+}

@@ -1,0 +1,447 @@
+.header {
+  width: 100%;
+
+  background: #ffffff;
+  border-bottom: 1px solid #f0ede8;
+}
+
+/* ========================================
+   MAIN CONTAINER
+======================================== */
+
+.container {
+  width: min(1200px, 100%);
+
+  min-height: 92px;
+
+  margin: 0 auto;
+
+  padding: 0 40px;
+
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 32px;
+
+  box-sizing: border-box;
+}
+
+/* ========================================
+   LOGO
+======================================== */
+
+.logo {
+  justify-self: start;
+
+  color: #2f2f2f;
+
+  font-size: 30px;
+  font-weight: 700;
+
+  letter-spacing: 0.05em;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+}
+
+/* ========================================
+   NAVIGATION
+======================================== */
+
+.nav {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 42px;
+
+  white-space: nowrap;
+}
+
+.navLink {
+  color: #474747;
+
+  font-size: 18px;
+  font-weight: 400;
+
+  text-decoration: none;
+
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: #e5ae68;
+}
+
+/* ========================================
+   ACTIONS
+======================================== */
+
+.actions {
+  justify-self: end;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 24px;
+
+  white-space: nowrap;
+}
+
+/* ========================================
+   CURRENCY
+======================================== */
+
+.currencyButton {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0;
+
+  border: none;
+
+  background: transparent;
+
+  font-family: inherit;
+  font-size: 18px;
+
+  cursor: pointer;
+}
+
+.activeCurrency {
+  color: #e5ae68;
+
+  font-weight: 600;
+}
+
+.inactiveCurrency {
+  color: #777777;
+
+  font-weight: 400;
+}
+
+.divider {
+  color: #a9a9a9;
+}
+
+/* ========================================
+   ICONS
+======================================== */
+
+.iconLink {
+  position: relative;
+
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  color: #333333;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.iconLink:hover {
+  color: #e5ae68;
+
+  transform: translateY(-1px);
+}
+
+.currencyButton:hover .inactiveCurrency {
+  color: #4d4d4d;
+}
+
+.heartIcon {
+  width: 29px;
+  height: 29px;
+}
+
+.cartIcon {
+  width: 30px;
+  height: 30px;
+}
+
+/* ========================================
+   COUNTER
+======================================== */
+
+.cartCount {
+  position: absolute;
+
+  top: -5px;
+  right: -8px;
+
+  min-width: 20px;
+  height: 20px;
+
+  padding: 0 5px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #e5ae68;
+
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+/* ========================================
+   LAPTOP
+======================================== */
+
+@media (max-width: 1200px) {
+  .container {
+    width: 100%;
+
+    padding: 0 32px;
+
+    gap: 24px;
+  }
+
+  .nav {
+    gap: 30px;
+  }
+
+  .actions {
+    gap: 20px;
+  }
+}
+
+/* ========================================
+   TABLET
+======================================== */
+
+@media (max-width: 1000px) {
+  .container {
+    padding: 0 24px;
+
+    min-height: 82px;
+
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+
+    gap: 18px;
+  }
+
+  .logo {
+    font-size: 26px;
+  }
+
+  .nav {
+    gap: 20px;
+  }
+
+  .navLink,
+  .currencyButton {
+    font-size: 16px;
+  }
+
+  .actions {
+    gap: 14px;
+  }
+
+  .iconLink {
+    width: 34px;
+    height: 34px;
+  }
+
+  .heartIcon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .cartIcon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* ========================================
+   SMALL TABLET
+======================================== */
+
+@media (max-width: 850px) {
+  .container {
+    padding: 0 20px;
+
+    min-height: 78px;
+
+    grid-template-columns: auto minmax(0, 1fr) auto;
+
+    gap: 14px;
+  }
+
+  .logo {
+    font-size: 22px;
+  }
+
+  .nav {
+    gap: 14px;
+  }
+
+  .navLink,
+  .currencyButton {
+    font-size: 14px;
+  }
+
+  .actions {
+    gap: 10px;
+  }
+
+  .currencyButton {
+    gap: 5px;
+  }
+
+  .iconLink {
+    width: 32px;
+    height: 32px;
+  }
+
+  .heartIcon {
+    width: 25px;
+    height: 25px;
+  }
+
+  .cartIcon {
+    width: 27px;
+    height: 27px;
+  }
+
+  .cartCount {
+    top: -4px;
+    right: -7px;
+
+    min-width: 18px;
+    height: 18px;
+
+    padding: 0 4px;
+
+    font-size: 9px;
+  }
+}
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 760px) {
+  .container {
+    width: 100%;
+
+    min-height: auto;
+
+    padding: 18px 16px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 16px;
+  }
+
+  .logo {
+    justify-self: center;
+
+    font-size: 26px;
+  }
+
+  .nav {
+    order: 2;
+
+    width: 100%;
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 20px;
+
+    flex-wrap: wrap;
+  }
+
+  .navLink {
+    font-size: 15px;
+  }
+
+  .actions {
+    order: 3;
+
+    justify-self: center;
+
+    gap: 18px;
+  }
+
+  .currencyButton {
+    font-size: 16px;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE
+======================================== */
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px 16px;
+
+    gap: 14px;
+  }
+
+  .logo {
+    font-size: 23px;
+  }
+
+  .nav {
+    gap: 14px;
+  }
+
+  .navLink {
+    font-size: 14px;
+  }
+
+  .actions {
+    gap: 16px;
+  }
+
+  .currencyButton {
+    font-size: 14px;
+  }
+
+  .iconLink {
+    width: 32px;
+    height: 32px;
+  }
+
+  .heartIcon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .cartIcon {
+    width: 27px;
+    height: 27px;
+  }
+}

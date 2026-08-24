@@ -1,0 +1,188 @@
+.page {
+  width: 100%;
+  min-height: 100vh;
+
+  background: #fffaf2;
+}
+
+.animalsSection {
+  width: 100%;
+  max-width: 1200px;
+
+  margin: 0 auto;
+
+  padding: 28px 16px 80px;
+
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0 0 20px;
+
+  color: #3f3f3f;
+
+  font-size: 42px;
+  font-weight: 400;
+
+  line-height: 1.2;
+
+  text-align: left;
+}
+
+.list {
+  display: grid;
+
+  grid-template-columns: repeat(4, 250px);
+
+  column-gap: 56px;
+
+  row-gap: 60px;
+
+  width: 100%;
+
+  justify-content: center;
+}
+
+/* ========================================
+   TABLET
+======================================== */
+
+@media (max-width: 1100px) {
+  .animalsSection {
+    padding: 28px 32px 72px;
+  }
+
+  .list {
+    grid-template-columns: repeat(3, 250px);
+
+    column-gap: 56px;
+  }
+
+  .title {
+    font-size: 40px;
+  }
+}
+
+/* ========================================
+   TABLET / SMALL DESKTOP
+======================================== */
+
+@media (max-width: 850px) {
+  .animalsSection {
+    padding: 28px 20px 70px;
+  }
+
+  .title {
+    font-size: 40px;
+  }
+
+  .list {
+    grid-template-columns: repeat(2, 250px);
+
+    column-gap: 56px;
+
+    row-gap: 48px;
+  }
+}
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 560px) {
+  .animalsSection {
+    padding: 28px 16px 60px;
+  }
+
+  .title {
+    margin-bottom: 24px;
+
+    font-size: 32px;
+  }
+
+  .list {
+    grid-template-columns: 250px;
+
+    justify-content: center;
+
+    column-gap: 0;
+
+    row-gap: 36px;
+  }
+}
+
+/* ========================================
+   BACK TO TOP
+======================================== */
+
+.backToTop {
+  position: fixed;
+
+  right: 32px;
+  bottom: 32px;
+
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid #e5ae68;
+  border-radius: 50%;
+
+  background: #e5ae68;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  z-index: 1000;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.backToTop:hover {
+  background: #d99545;
+
+  border-color: #d99545;
+
+  transform: translateY(-3px);
+
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+}
+
+.backToTop:active {
+  transform: translateY(-1px);
+}
+
+.backToTopIcon {
+  width: 24px;
+  height: 24px;
+
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .backToTop {
+    right: 18px;
+    bottom: 18px;
+
+    width: 44px;
+    height: 44px;
+  }
+
+  .backToTopIcon {
+    width: 20px;
+    height: 20px;
+  }
+}
