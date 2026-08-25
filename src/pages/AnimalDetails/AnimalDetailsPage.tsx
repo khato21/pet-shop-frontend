@@ -1,8 +1,13 @@
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
-import { getAnimals } from "../../store/thunks/animalThunks";
+import { getAnimalById } from "../../store/thunks/animalThunks";
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+
+import useWishlist from "../../hooks/useWishlist";
+
+import { addToCart } from "../../store/slices/cartSlice";
 
 import styles from "./AnimalDetailsPage.module.css";
 
@@ -15,9 +20,15 @@ const AnimalDetailsPage = () => {
 
   const currency = useAppSelector((state) => state.currency.currency);
 
+  const cart = useAppSelector((state) => state.cart.cart);
+
+  const { addAnimal, removeAnimal, isInWishlist } = useWishlist();
+
   useEffect(() => {
-    dispatch(getAnimals());
-  }, [dispatch]);
+    if (id) {
+      dispatch(getAnimalById(id));
+    }
+  }, [dispatch, id]);
 
   const animal = animals.find((animal) => animal.id === id);
 
@@ -34,6 +45,24 @@ const AnimalDetailsPage = () => {
   }
 
   const price = currency === "GEL" ? animal.priceGEL : animal.priceUSD;
+
+  const isWishlisted = isInWishlist(animal.id);
+
+  const isInCart = cart.some((item) => item.animal.id === animal.id);
+
+  const handleAddToCart = () => {
+    dispatch(addToCart(animal));
+
+    toast.success(`${animal.name} added to cart`);
+  };
+
+  const handleWishlistToggle = () => {
+    if (isWishlisted) {
+      removeAnimal(animal.id);
+    } else {
+      addAnimal(animal);
+    }
+  };
 
   return (
     <main className={styles.page}>
@@ -61,6 +90,32 @@ const AnimalDetailsPage = () => {
             </p>
 
             <p className={styles.stock}>Stock: {animal.stock}</p>
+          </div>
+
+          <div className={styles.actions}>
+            <button
+              className={`${styles.cartButton} ${
+                isInCart ? styles.cartButtonAdded : ""
+              }`}
+              type="button"
+              onClick={handleAddToCart}
+              disabled={animal.stock === 0}
+            >
+              {isInCart ? "ADDED TO CART ✓" : "ADD TO CART"}
+            </button>
+
+            <button
+              className={styles.wishlistButton}
+              type="button"
+              onClick={handleWishlistToggle}
+              aria-label={
+                isWishlisted
+                  ? `Remove ${animal.name} from wishlist`
+                  : `Add ${animal.name} to wishlist`
+              }
+            >
+              {isWishlisted ? "♥" : "♡"}
+            </button>
           </div>
         </div>
       </div>
