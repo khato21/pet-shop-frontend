@@ -78,8 +78,6 @@ const useCart = () => {
     }
 
     dispatch(increaseQuantity(animalId));
-
-    toast.success("Quantity increased");
   };
 
   const decreaseAnimalQuantity = (animalId: string) => {
@@ -95,8 +93,6 @@ const useCart = () => {
     }
 
     dispatch(decreaseQuantity(animalId));
-
-    toast.success("Quantity decreased");
   };
 
   const removeAnimal = (animalId: string) => {

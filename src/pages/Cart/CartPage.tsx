@@ -1,71 +1,18 @@
 import { Link } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import { useEffect, useState } from "react";
 
-import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+import { useAppSelector } from "../../hooks/hooks";
 
 import CartItem from "../../components/CartItem/CartItem";
-
-import { getAnimalById } from "../../store/thunks/animalThunks";
-
-import { useWebSocket } from "../../hooks/useWebSocket";
-
-import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import styles from "./CartPage.module.css";
 
 const CartPage = () => {
-  const dispatch = useAppDispatch();
-
   const cart = useAppSelector((state) => state.cart.cart);
 
+  const currency = useAppSelector((state) => state.currency.currency);
+
   const [showBackToTop, setShowBackToTop] = useState(false);
-
-  const handleWebSocketMessage = useCallback(
-    async (message: WebSocketMessage) => {
-      // ANIMAL UPDATE
-      // Admin-ში ცხოველის stock-ის ან სხვა მონაცემის
-      // ცვლილების შემდეგ Cart-ში არსებული იგივე
-      // ცხოველი თავიდან წამოვიღოთ.
-      if (
-        message.type === "RESOURCE_CHANGED" &&
-        message.resource === "animals" &&
-        message.action === "UPDATE" &&
-        message.id
-      ) {
-        const cartItem = cart.find((item) => item.animal.id === message.id);
-
-        // თუ ეს ცხოველი Cart-ში არ გვაქვს,
-        // Cart-ისთვის არაფერია გასაკეთებელი.
-        if (!cartItem) {
-          return;
-        }
-
-        const previousStock = cartItem.animal.stock;
-
-        console.log("Cart animal changed via WebSocket:", message.id);
-
-        try {
-          const freshAnimal = await dispatch(
-            getAnimalById(message.id),
-          ).unwrap();
-
-          // Toast მხოლოდ მაშინ გამოვაჩინოთ,
-          // თუ stock რეალურად შეიცვალა.
-          if (previousStock !== freshAnimal.stock) {
-            toast.info(
-              `${freshAnimal.name} stock updated: ${previousStock} → ${freshAnimal.stock}`,
-            );
-          }
-        } catch (error) {
-          console.error("Failed to update cart animal via WebSocket:", error);
-        }
-      }
-    },
-    [cart, dispatch],
-  );
-
-  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -128,7 +75,10 @@ const CartPage = () => {
   }
 
   const totalPrice = cart.reduce(
-    (total, item) => total + item.animal.priceGEL * item.quantity,
+    (total, item) =>
+      total +
+      (currency === "GEL" ? item.animal.priceGEL : item.animal.priceUSD) *
+        item.quantity,
     0,
   );
 
@@ -150,7 +100,10 @@ const CartPage = () => {
 
       <div className={styles.summary}>
         <p className={styles.total}>
-          Total: <strong>{totalPrice.toFixed(2)} GEL</strong>
+          Total:{" "}
+          <strong>
+            {totalPrice.toFixed(2)} {currency}
+          </strong>
         </p>
 
         <Link to="/checkout" className={styles.checkoutButton}>

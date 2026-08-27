@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 
 import useCart from "../../hooks/useCart";
 
+import { useAppSelector } from "../../hooks/hooks";
+
 import type { CartItem as CartItemType } from "../../interfaces/cart.interface";
 
 import styles from "./CartItem.module.css";
@@ -13,6 +15,8 @@ interface CartItemProps {
 const CartItem = ({ item }: CartItemProps) => {
   const { increaseAnimalQuantity, decreaseAnimalQuantity, removeAnimal } =
     useCart();
+
+  const currency = useAppSelector((state) => state.currency.currency);
 
   const { animal, quantity } = item;
 
@@ -27,6 +31,8 @@ const CartItem = ({ item }: CartItemProps) => {
   const handleRemove = () => {
     removeAnimal(animal.id);
   };
+
+  const price = currency === "GEL" ? animal.priceGEL : animal.priceUSD;
 
   return (
     <article className={styles.item}>
@@ -47,7 +53,9 @@ const CartItem = ({ item }: CartItemProps) => {
           <h2 className={styles.name}>{animal.name}</h2>
         </Link>
 
-        <p className={styles.price}>{animal.priceGEL} GEL</p>
+        <p className={styles.price}>
+          {price} {currency}
+        </p>
 
         <p className={styles.stock}>Stock: {animal.stock}</p>
       </div>
