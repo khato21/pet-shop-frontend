@@ -19,7 +19,7 @@ const animalWithCategorySlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // GET ALL ANIMALS WITH CATEGORIES
+
       .addCase(getAnimalWithCategories.pending, (state) => {
         state.loading = true;
         state.error = null;

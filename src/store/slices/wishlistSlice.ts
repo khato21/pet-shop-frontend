@@ -21,7 +21,6 @@ const wishlistSlice = createSlice({
   initialState,
 
   reducers: {
-    // ADD ANIMAL TO WISHLIST
     addToWishlist: (state, action: PayloadAction<Animal>) => {
       const existingItem = state.wishlist.find(
         (item) => item.animal.id === action.payload.id,
@@ -47,14 +46,12 @@ const wishlistSlice = createSlice({
       }
     },
 
-    // REMOVE ANIMAL FROM WISHLIST
     removeFromWishlist: (state, action: PayloadAction<string>) => {
       state.wishlist = state.wishlist.filter(
         (item) => item.animal.id !== action.payload,
       );
     },
 
-    // CLEAR WISHLIST
     clearWishlist: (state) => {
       state.wishlist = [];
     },
@@ -63,7 +60,6 @@ const wishlistSlice = createSlice({
   extraReducers: (builder) => {
     builder
 
-      // GET ALL ANIMALS
       .addCase(getAnimals.fulfilled, (state, action) => {
         const freshAnimals = action.payload;
 
@@ -83,7 +79,6 @@ const wishlistSlice = createSlice({
         });
       })
 
-      // GET ANIMAL BY ID
       .addCase(getAnimalById.fulfilled, (state, action) => {
         const freshAnimal = action.payload;
 
@@ -96,7 +91,6 @@ const wishlistSlice = createSlice({
         }
       })
 
-      // UPDATE ANIMAL
       .addCase(updateAnimal.fulfilled, (state, action) => {
         const updatedAnimal = action.payload;
 

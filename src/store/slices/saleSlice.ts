@@ -16,7 +16,7 @@ const saleSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // GET SALES
+
       .addCase(getSales.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -30,7 +30,6 @@ const saleSlice = createSlice({
         state.error = action.error.message ?? "Failed to get sales";
       })
 
-      // CREATE SALE
       .addCase(createSale.pending, (state) => {
         state.loading = true;
         state.error = null;

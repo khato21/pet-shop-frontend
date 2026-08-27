@@ -10,6 +10,8 @@ import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryTh
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
+import { selectAnimalsWithCategories } from "../../store/selectors/animalSelectors";
+
 import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import styles from "./PopularAnimalsPage.module.css";
@@ -19,23 +21,19 @@ const PopularAnimalsPage = () => {
 
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  const {
-    animals,
-    loading: animalsLoading,
-    error: animalsError,
-  } = useAppSelector((state) => state.animals);
+  const { loading: animalsLoading, error: animalsError } = useAppSelector(
+    (state) => state.animals,
+  );
 
-  const {
-    categories,
-    loading: categoriesLoading,
-    error: categoriesError,
-  } = useAppSelector((state) => state.categories);
+  const { loading: categoriesLoading, error: categoriesError } = useAppSelector(
+    (state) => state.categories,
+  );
 
-  const {
-    animalWithCategories,
-    loading: relationsLoading,
-    error: relationsError,
-  } = useAppSelector((state) => state.animalWithCategories);
+  const { loading: relationsLoading, error: relationsError } = useAppSelector(
+    (state) => state.animalWithCategories,
+  );
+
+  const animalsWithCategories = useAppSelector(selectAnimalsWithCategories);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -114,9 +112,11 @@ const PopularAnimalsPage = () => {
 
   const error = animalsError || categoriesError || relationsError;
 
-  const popularAnimals = animals.filter((animal) => animal.isPopular);
+  const popularAnimals = animalsWithCategories
+    .filter((item) => item.animal.isPopular)
+    .reverse();
 
-  if (loading && animals.length === 0) {
+  if (loading && animalsWithCategories.length === 0) {
     return <p>Loading popular animals...</p>;
   }
 
@@ -134,23 +134,13 @@ const PopularAnimalsPage = () => {
         </Link>
 
         <div className={styles.list}>
-          {popularAnimals.map((animal) => {
-            const relatedCategoryIds = animalWithCategories
-              .filter((relation) => relation.animal_id === animal.id)
-              .map((relation) => relation.category_id);
-
-            const animalCategories = categories.filter((category) =>
-              relatedCategoryIds.includes(category.id),
-            );
-
-            return (
-              <AnimalCard
-                key={animal.id}
-                animal={animal}
-                categories={animalCategories}
-              />
-            );
-          })}
+          {popularAnimals.map(({ animal, categories }) => (
+            <AnimalCard
+              key={animal.id}
+              animal={animal}
+              categories={categories}
+            />
+          ))}
         </div>
       </section>
 

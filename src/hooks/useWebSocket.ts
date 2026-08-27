@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { WebSocketMessage } from "../interfaces/websocket.interface";
-import type { WebSocketState } from "../interfaces/websocket-state.interface";
 
 const WEBSOCKET_URL = "ws://localhost:3001";
 
@@ -9,11 +8,7 @@ export const useWebSocket = (
   onMessage?: (message: WebSocketMessage) => void | Promise<void>,
   onConnected?: () => void | Promise<void>,
 ) => {
-  const [state, setState] = useState<WebSocketState>({
-    connected: false,
-    loading: true,
-    error: null,
-  });
+  const [connected, setConnected] = useState(false);
 
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -49,76 +44,38 @@ export const useWebSocket = (
 
       socketRef.current = socket;
 
-      setState({
-        connected: false,
-        loading: true,
-        error: null,
-      });
-
       socket.onopen = async () => {
-        console.log("SHOP WebSocket connected");
-
-        setState({
-          connected: true,
-          loading: false,
-          error: null,
-        });
+        setConnected(true);
 
         try {
           await onConnectedRef.current?.();
         } catch (error) {
-          console.error("Error handling WebSocket connection:", error);
-
-          setState((previousState) => ({
-            ...previousState,
-            error: "Failed to synchronize data after WebSocket connection.",
-          }));
+          console.error("WebSocket connection handler error:", error);
         }
       };
 
       socket.onmessage = async (event) => {
-        console.log("SHOP WebSocket message received:", event.data);
-
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
 
           await onMessageRef.current?.(message);
         } catch (error) {
-          console.error("Error handling WebSocket message:", error);
-
-          setState((previousState) => ({
-            ...previousState,
-            error: "Failed to process WebSocket message.",
-          }));
+          console.error("WebSocket message handler error:", error);
         }
       };
 
       socket.onclose = () => {
-        console.log("SHOP WebSocket disconnected");
-
-        setState((previousState) => ({
-          ...previousState,
-          connected: false,
-          loading: false,
-        }));
+        setConnected(false);
 
         if (!isUnmounted) {
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log("SHOP WebSocket reconnecting...");
-
             connect();
           }, 1000);
         }
       };
 
-      socket.onerror = (error) => {
-        console.error("SHOP WebSocket error:", error);
-
-        setState({
-          connected: false,
-          loading: false,
-          error: "WebSocket connection error.",
-        });
+      socket.onerror = () => {
+        setConnected(false);
       };
     };
 
@@ -140,13 +97,7 @@ export const useWebSocket = (
   const sendMessage = (message: string): void => {
     const socket = socketRef.current;
 
-    if (!socket) {
-      console.warn("SHOP WebSocket is not connected");
-      return;
-    }
-
-    if (socket.readyState !== WebSocket.OPEN) {
-      console.warn("SHOP WebSocket is not open");
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
       return;
     }
 
@@ -154,7 +105,7 @@ export const useWebSocket = (
   };
 
   return {
-    ...state,
+    connected,
     sendMessage,
   };
 };

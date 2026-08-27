@@ -51,11 +51,8 @@ const AnimalsPage = () => {
   }, [dispatch]);
 
   const handleWebSocketConnected = useCallback(() => {
-    console.log("SHOP WebSocket connected - synchronizing animals");
-
-    dispatch(getAnimals(true));
-    dispatch(getAnimalWithCategories(true));
-  }, [dispatch]);
+    console.log("SHOP WebSocket connected");
+  }, []);
 
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
@@ -98,9 +95,6 @@ const AnimalsPage = () => {
           getAnimalById(message.id),
         ).unwrap();
 
-        // IMPORTANT:
-        // თუ ეს ცხოველი Cart-შია, Cart-შიც უნდა განახლდეს
-        // ახალი მონაცემებით (სურათი, ფასი, stock და ა.შ.).
         dispatch(updateCartAnimal(updatedAnimal));
 
         const stockChanged =
@@ -123,10 +117,6 @@ const AnimalsPage = () => {
         return;
       }
 
-      // CREATE / DELETE
-      // Admin-ში ცხოველისთვის კატეგორიის დამატების
-      // ან წაშლის შემდეგ Shop თავიდან იღებს
-      // animals_with_categories-ის სრულ სიას.
       if (
         message.type === "RESOURCE_CHANGED" &&
         message.resource === "animals_with_categories" &&
@@ -177,15 +167,22 @@ const AnimalsPage = () => {
     return <p>{error}</p>;
   }
 
+  const sortedAnimals = [...animals].sort(
+    (a, b) =>
+      new Date(b.createdAt ?? 0).getTime() -
+      new Date(a.createdAt ?? 0).getTime(),
+  );
+
   return (
     <main className={styles.page}>
+      {/* PopularAnimals-ს არ ვეხებით */}
       <PopularAnimals />
 
       <section className={styles.animalsSection}>
         <h1 className={styles.title}>Animals</h1>
 
         <div className={styles.list}>
-          {animals.map((animal) => {
+          {sortedAnimals.map((animal) => {
             const relatedCategoryIds = animalWithCategories
               .filter((relation) => relation.animal_id === animal.id)
               .map((relation) => relation.category_id);

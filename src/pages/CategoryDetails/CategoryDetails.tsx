@@ -101,10 +101,6 @@ const CategoryDetails = () => {
         return;
       }
 
-      /*
-       * ADMIN-ში category-ის CREATE / UPDATE / DELETE
-       * → Shop თავიდან იღებს categories-ს.
-       */
       if (
         message.resource === "categories" &&
         (message.action === "CREATE" ||
@@ -120,11 +116,6 @@ const CategoryDetails = () => {
         return;
       }
 
-      /*
-       * ADMIN-ში animals_with_categories-ის
-       * CREATE / DELETE
-       * → Shop თავიდან იღებს კავშირების სრულ სიას.
-       */
       if (
         message.resource === "animals_with_categories" &&
         (message.action === "CREATE" || message.action === "DELETE")
@@ -138,10 +129,6 @@ const CategoryDetails = () => {
         return;
       }
 
-      /*
-       * თუ animals_with_categories UPDATE მომავალში დაემატა,
-       * ესეც სრულად განვაახლოთ.
-       */
       if (
         message.resource === "animals_with_categories" &&
         message.action === "UPDATE"
@@ -225,9 +212,13 @@ const CategoryDetails = () => {
     .filter((relation) => relation.category_id === category.id)
     .map((relation) => relation.animal_id);
 
-  const categoryAnimals = animals.filter((animal) =>
-    categoryAnimalIds.includes(animal.id),
-  );
+  const categoryAnimals = animals
+    .filter((animal) => categoryAnimalIds.includes(animal.id))
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? 0).getTime() -
+        new Date(a.createdAt ?? 0).getTime(),
+    );
 
   return (
     <main className={styles.page}>

@@ -13,6 +13,7 @@ const mapAnimal = (animal: AnimalApiResponse): Animal => ({
   isPopular: animal.data.isPopular,
   stock: animal.data.stock,
   imageUrl: animal.data.imageUrl,
+  createdAt: animal.createdAt,
 });
 
 export const getAnimals = async (): Promise<Animal[]> => {

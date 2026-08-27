@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -8,12 +8,9 @@ import "swiper/css";
 
 import AnimalCard from "../AnimalCard/AnimalCard";
 
-import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+import { useAppSelector } from "../../hooks/hooks";
 
-import { getAnimals } from "../../store/thunks/animalThunks";
-import { getCategories } from "../../store/thunks/categoryThunks";
-import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryThunks";
-import { getSales } from "../../store/thunks/saleThunks";
+import type { Animal } from "../../interfaces/animal.interface";
 
 import styles from "./PopularAnimals.module.css";
 
@@ -24,7 +21,10 @@ interface PopularAnimalsProps {
 const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   const swiperRef = useRef<SwiperInstance | null>(null);
 
-  const dispatch = useAppDispatch();
+  const [sliderAnimals, setSliderAnimals] = useState<Animal[]>([]);
+
+  const initializedRef = useRef(false);
+  const previousSalesCountRef = useRef(0);
 
   const {
     animals,
@@ -46,13 +46,34 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   const { sales } = useAppSelector((state) => state.sales);
 
+  /*
+   * თავიდან სლაიდერში ყოველთვის პირველი 5 პოპულარული ცხოველია.
+   *
+   * აქ sales საერთოდ არ მონაწილეობს.
+   */
   useEffect(() => {
-    dispatch(getAnimals());
-    dispatch(getCategories());
-    dispatch(getAnimalWithCategories());
-    dispatch(getSales());
-  }, [dispatch]);
+    if (initializedRef.current) {
+      return;
+    }
 
+    const initialPopularAnimals = animals
+      .filter((animal) => animal.isPopular)
+      .slice(0, 5);
+
+    if (initialPopularAnimals.length === 0) {
+      return;
+    }
+
+    setSliderAnimals(initialPopularAnimals);
+    initializedRef.current = true;
+  }, [animals]);
+
+  /*
+   * ახალი გაყიდვების დათვლა.
+   *
+   * sales-ში მხოლოდ createSale()-ით დამატებული ახალი გაყიდვებია,
+   * რადგან getSales() აღარ იძახება.
+   */
   const salesByAnimalId = useMemo(() => {
     return sales.reduce<Record<string, number>>((totalSales, sale) => {
       totalSales[sale.animalId] =
@@ -62,79 +83,109 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     }, {});
   }, [sales]);
 
-  const popularAnimals = useMemo(() => {
-    const popularAnimalsList = animals.filter((animal) => animal.isPopular);
-
-    const initialSliderAnimals = popularAnimalsList.slice(0, 5);
-
-    if (initialSliderAnimals.length <= 1) {
-      return initialSliderAnimals;
+  /*
+   * სლაიდერის გადალაგება ხდება მხოლოდ ახალი Sale-ის შექმნის შემდეგ.
+   *
+   * საწყისი 5 არ იცვლება ძველი მონაცემებით,
+   * რადგან ძველი sales საერთოდ არ იტვირთება.
+   */
+  useEffect(() => {
+    if (!initializedRef.current) {
+      return;
     }
 
-    const sliderAnimals = [...initialSliderAnimals];
+    if (sales.length === 0) {
+      return;
+    }
 
-    const outsidePopularAnimals = popularAnimalsList.filter(
-      (animal) =>
-        !initialSliderAnimals.some(
-          (sliderAnimal) => sliderAnimal.id === animal.id,
-        ),
-    );
+    /*
+     * თუ sales-ის რაოდენობა არ გაზრდილა,
+     * ახალი გაყიდვა არ მომხდარა.
+     */
+    if (sales.length <= previousSalesCountRef.current) {
+      return;
+    }
 
-    const remainingAnimals = [...outsidePopularAnimals];
+    previousSalesCountRef.current = sales.length;
 
-    while (remainingAnimals.length > 0 && sliderAnimals.length > 0) {
+    setSliderAnimals((currentSliderAnimals) => {
+      if (currentSliderAnimals.length === 0) {
+        return currentSliderAnimals;
+      }
+
+      const popularAnimals = animals.filter((animal) => animal.isPopular);
+
+      const outsideSliderAnimals = popularAnimals.filter(
+        (animal) =>
+          !currentSliderAnimals.some(
+            (sliderAnimal) => sliderAnimal.id === animal.id,
+          ),
+      );
+
+      if (outsideSliderAnimals.length === 0) {
+        return currentSliderAnimals;
+      }
+
+      /*
+       * ვპოულობთ Slider-ის გარეთ ყველაზე მეტ გაყიდვიან პოპულარულს.
+       */
       let mostSoldOutsideAnimalIndex = 0;
 
-      for (let index = 1; index < remainingAnimals.length; index += 1) {
-        const currentAnimal = remainingAnimals[index];
-        const mostSoldAnimal = remainingAnimals[mostSoldOutsideAnimalIndex];
+      for (let index = 1; index < outsideSliderAnimals.length; index += 1) {
+        const currentAnimal = outsideSliderAnimals[index];
+        const mostSoldAnimal = outsideSliderAnimals[mostSoldOutsideAnimalIndex];
 
         const currentSales = salesByAnimalId[currentAnimal.id] ?? 0;
-        const mostSoldOutsideSales = salesByAnimalId[mostSoldAnimal.id] ?? 0;
+        const mostSoldSales = salesByAnimalId[mostSoldAnimal.id] ?? 0;
 
-        if (currentSales > mostSoldOutsideSales) {
+        if (currentSales > mostSoldSales) {
           mostSoldOutsideAnimalIndex = index;
         }
       }
 
       const mostSoldOutsideAnimal =
-        remainingAnimals[mostSoldOutsideAnimalIndex];
+        outsideSliderAnimals[mostSoldOutsideAnimalIndex];
 
       const mostSoldOutsideSales =
         salesByAnimalId[mostSoldOutsideAnimal.id] ?? 0;
 
+      /*
+       * ვპოულობთ Slider-ში ყველაზე ნაკლებად გაყიდულს.
+       */
       let leastSoldSliderIndex = 0;
 
-      for (let index = 1; index < sliderAnimals.length; index += 1) {
-        const currentSliderAnimal = sliderAnimals[index];
-        const leastSoldSliderAnimal = sliderAnimals[leastSoldSliderIndex];
+      for (let index = 1; index < currentSliderAnimals.length; index += 1) {
+        const currentSliderAnimal = currentSliderAnimals[index];
+        const leastSoldAnimal = currentSliderAnimals[leastSoldSliderIndex];
 
-        const currentSliderSales = salesByAnimalId[currentSliderAnimal.id] ?? 0;
+        const currentSales = salesByAnimalId[currentSliderAnimal.id] ?? 0;
+        const leastSoldSales = salesByAnimalId[leastSoldAnimal.id] ?? 0;
 
-        const leastSoldSliderSales =
-          salesByAnimalId[leastSoldSliderAnimal.id] ?? 0;
-
-        if (currentSliderSales < leastSoldSliderSales) {
+        if (currentSales < leastSoldSales) {
           leastSoldSliderIndex = index;
         }
       }
 
-      const leastSoldSliderAnimal = sliderAnimals[leastSoldSliderIndex];
+      const leastSoldSliderAnimal = currentSliderAnimals[leastSoldSliderIndex];
 
       const leastSoldSliderSales =
         salesByAnimalId[leastSoldSliderAnimal.id] ?? 0;
 
+      /*
+       * მხოლოდ მაშინ ვანაცვლებთ,
+       * როცა Slider-ის გარეთ მყოფმა ნამდვილად მეტი გაყიდა.
+       */
       if (mostSoldOutsideSales > leastSoldSliderSales) {
-        sliderAnimals[leastSoldSliderIndex] = mostSoldOutsideAnimal;
-      } else {
-        break;
+        const updatedSliderAnimals = [...currentSliderAnimals];
+
+        updatedSliderAnimals[leastSoldSliderIndex] = mostSoldOutsideAnimal;
+
+        return updatedSliderAnimals;
       }
 
-      remainingAnimals.splice(mostSoldOutsideAnimalIndex, 1);
-    }
-
-    return sliderAnimals;
-  }, [animals, salesByAnimalId]);
+      return currentSliderAnimals;
+    });
+  }, [sales, salesByAnimalId, animals]);
 
   const loading = animalsLoading || categoriesLoading || relationsLoading;
 
@@ -144,7 +195,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     return <p>Loading popular animals...</p>;
   }
 
-  if (error && popularAnimals.length === 0) {
+  if (error && sliderAnimals.length === 0) {
     return <p>{error}</p>;
   }
 
@@ -192,7 +243,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             },
           }}
         >
-          {popularAnimals.map((animal) => {
+          {sliderAnimals.map((animal) => {
             const relatedCategoryIds = animalWithCategories
               .filter((relation) => relation.animal_id === animal.id)
               .map((relation) => relation.category_id);

@@ -22,6 +22,7 @@ const mapAnimal = (animal: AnimalApiResponse): Animal => ({
   isPopular: animal.data.isPopular,
   stock: animal.data.stock,
   imageUrl: animal.data.imageUrl,
+  createdAt: animal.createdAt,
 });
 
 const notifyAnimalUpdated = (id: string): void => {

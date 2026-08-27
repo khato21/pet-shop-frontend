@@ -13,7 +13,6 @@ const cartSlice = createSlice({
   initialState,
 
   reducers: {
-    // ADD ANIMAL TO CART
     addToCart: (state, action: PayloadAction<Animal>) => {
       if (action.payload.stock <= 0) {
         return;
@@ -52,7 +51,6 @@ const cartSlice = createSlice({
       }
     },
 
-    // DECREASE QUANTITY
     decreaseQuantity: (state, action: PayloadAction<string>) => {
       const item = state.cart.find(
         (cartItem) => cartItem.animal.id === action.payload,
@@ -67,14 +65,12 @@ const cartSlice = createSlice({
       }
     },
 
-    // REMOVE ANIMAL FROM CART
     removeFromCart: (state, action: PayloadAction<string>) => {
       state.cart = state.cart.filter(
         (item) => item.animal.id !== action.payload,
       );
     },
 
-    // UPDATE ANIMAL IN CART
     updateCartAnimal: (state, action: PayloadAction<Animal>) => {
       const existingItem = state.cart.find(
         (item) => item.animal.id === action.payload.id,
@@ -85,7 +81,6 @@ const cartSlice = createSlice({
       }
     },
 
-    // CLEAR CART
     clearCart: (state) => {
       state.cart = [];
     },
