@@ -35,12 +35,8 @@ const AnimalCard = ({ animal, categories = [] }: AnimalCardProps) => {
   const handleWishlistToggle = () => {
     if (isInWishlist(animal.id)) {
       removeAnimal(animal.id);
-
-      toast.info(`${animal.name} removed from wishlist`);
     } else {
       addAnimal(animal);
-
-      toast.success(`${animal.name} added to wishlist`);
     }
   };
 
