@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import useWishlist from "../../hooks/useWishlist";
@@ -7,14 +7,54 @@ import useCart from "../../hooks/useCart";
 import WishlistItem from "../../components/WishlistItem/WishlistItem";
 import WishlistRemoveModal from "../../components/WishlistRemoveModal/WishlistRemoveModal";
 
+import { useAppDispatch } from "../../hooks/hooks";
+import { getAnimalById } from "../../store/thunks/animalThunks";
+
+import { useWebSocket } from "../../hooks/useWebSocket";
+
+import type { WebSocketMessage } from "../../interfaces/websocket.interface";
+
 import styles from "./WishlistPage.module.css";
 
 const WishlistPage = () => {
+  const dispatch = useAppDispatch();
+
   const { wishlist } = useWishlist();
   const { addAllAnimals } = useCart();
 
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const handleWebSocketMessage = useCallback(
+    async (message: WebSocketMessage) => {
+      if (
+        message.type === "RESOURCE_CHANGED" &&
+        message.resource === "animals" &&
+        message.action === "UPDATE" &&
+        message.id
+      ) {
+        const wishlistItem = wishlist.find(
+          (item) => item.animal.id === message.id,
+        );
+
+        if (!wishlistItem) {
+          return;
+        }
+
+        try {
+          await dispatch(getAnimalById(message.id)).unwrap();
+        } catch (error) {
+          console.error(
+            "Failed to update wishlist animal via WebSocket:",
+            error,
+          );
+        }
+      }
+    },
+    [wishlist, dispatch],
+  );
+
+  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleScroll = () => {
