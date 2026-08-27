@@ -1,18 +1,67 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
 
-import { useAppSelector } from "../../hooks/hooks";
+import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+import { useWebSocket } from "../../hooks/useWebSocket";
+
+import { getAnimalById } from "../../store/thunks/animalThunks";
+import { updateCartAnimal } from "../../store/slices/cartSlice";
+
+import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import CartItem from "../../components/CartItem/CartItem";
 
 import styles from "./CartPage.module.css";
 
 const CartPage = () => {
+  const dispatch = useAppDispatch();
+
   const cart = useAppSelector((state) => state.cart.cart);
 
   const currency = useAppSelector((state) => state.currency.currency);
 
   const [showBackToTop, setShowBackToTop] = useState(false);
+
+  const handleWebSocketMessage = useCallback(
+    async (message: WebSocketMessage) => {
+      if (
+        message.type === "RESOURCE_CHANGED" &&
+        message.source === "ADMIN" &&
+        message.resource === "animals" &&
+        message.action === "UPDATE" &&
+        message.id
+      ) {
+        console.log("Cart animal changed via WebSocket:", message.id);
+
+        const isInCart = cart.some((item) => item.animal.id === message.id);
+
+        if (!isInCart) {
+          return;
+        }
+
+        try {
+          const updatedAnimal = await dispatch(
+            getAnimalById(message.id),
+          ).unwrap();
+
+          console.log("🔥 UPDATED ANIMAL FROM GET:", updatedAnimal);
+
+          dispatch(updateCartAnimal(updatedAnimal));
+
+          console.log(
+            "Cart animal updated:",
+            updatedAnimal.name,
+            updatedAnimal.id,
+          );
+        } catch (error) {
+          console.error("Failed to update cart animal via WebSocket:", error);
+        }
+      }
+    },
+    [cart, dispatch],
+  );
+
+  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleScroll = () => {

@@ -11,6 +11,8 @@ import type { RootState } from "../index";
 
 const ANIMALS_URL = "animals";
 
+const WEBSOCKET_URL = "ws://localhost:3001";
+
 const mapAnimal = (animal: AnimalApiResponse): Animal => ({
   id: animal.id,
   name: animal.data.name,
@@ -21,6 +23,30 @@ const mapAnimal = (animal: AnimalApiResponse): Animal => ({
   stock: animal.data.stock,
   imageUrl: animal.data.imageUrl,
 });
+
+const notifyAnimalUpdated = (id: string): void => {
+  const socket = new WebSocket(WEBSOCKET_URL);
+
+  socket.onopen = () => {
+    const message = {
+      type: "RESOURCE_CHANGED",
+      source: "SHOP",
+      action: "UPDATE",
+      resource: "animals",
+      id,
+    };
+
+    console.log("📤 Shop WebSocket message sent:", message);
+
+    socket.send(JSON.stringify(message));
+
+    socket.close();
+  };
+
+  socket.onerror = (error) => {
+    console.error("Shop WebSocket error:", error);
+  };
+};
 
 export const getAnimals = createAsyncThunk<
   Animal[],
@@ -74,6 +100,8 @@ export const updateAnimal = createAsyncThunk<
   }
 >("animals/updateAnimal", async ({ id, animal }) => {
   await update<AnimalApiResponse, Omit<Animal, "id">>(ANIMALS_URL, id, animal);
+
+  notifyAnimalUpdated(id);
 
   return {
     id,

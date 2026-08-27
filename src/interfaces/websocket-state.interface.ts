@@ -1,5 +1,7 @@
 export interface WebSocketState {
-  isConnected: boolean;
+  connected: boolean;
+
   loading: boolean;
+
   error: string | null;
 }

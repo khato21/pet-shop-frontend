@@ -4,8 +4,6 @@ import type { CartItem } from "../../interfaces/cart.interface";
 import type { CartState } from "../../interfaces/cart-state.interface";
 import type { Animal } from "../../interfaces/animal.interface";
 
-import { getAnimalById } from "../thunks/animalThunks";
-
 const initialState: CartState = {
   cart: [],
 };
@@ -17,7 +15,6 @@ const cartSlice = createSlice({
   reducers: {
     // ADD ANIMAL TO CART
     addToCart: (state, action: PayloadAction<Animal>) => {
-      // If there is no stock, do not add the animal to the cart
       if (action.payload.stock <= 0) {
         return;
       }
@@ -77,24 +74,21 @@ const cartSlice = createSlice({
       );
     },
 
+    // UPDATE ANIMAL IN CART
+    updateCartAnimal: (state, action: PayloadAction<Animal>) => {
+      const existingItem = state.cart.find(
+        (item) => item.animal.id === action.payload.id,
+      );
+
+      if (existingItem) {
+        existingItem.animal = action.payload;
+      }
+    },
+
     // CLEAR CART
     clearCart: (state) => {
       state.cart = [];
     },
-  },
-
-  extraReducers: (builder) => {
-    builder.addCase(getAnimalById.fulfilled, (state, action) => {
-      const freshAnimal = action.payload;
-
-      const existingItem = state.cart.find(
-        (item) => item.animal.id === freshAnimal.id,
-      );
-
-      if (existingItem) {
-        existingItem.animal = freshAnimal;
-      }
-    });
   },
 });
 
@@ -103,6 +97,7 @@ export const {
   increaseQuantity,
   decreaseQuantity,
   removeFromCart,
+  updateCartAnimal,
   clearCart,
 } = cartSlice.actions;
 

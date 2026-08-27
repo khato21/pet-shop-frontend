@@ -8,6 +8,8 @@ import { getAnimals, getAnimalById } from "../../store/thunks/animalThunks";
 import { getCategories } from "../../store/thunks/categoryThunks";
 import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryThunks";
 
+import { updateCartAnimal } from "../../store/slices/cartSlice";
+
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
@@ -95,6 +97,11 @@ const AnimalsPage = () => {
         const updatedAnimal = await dispatch(
           getAnimalById(message.id),
         ).unwrap();
+
+        // IMPORTANT:
+        // თუ ეს ცხოველი Cart-შია, Cart-შიც უნდა განახლდეს
+        // ახალი მონაცემებით (სურათი, ფასი, stock და ა.შ.).
+        dispatch(updateCartAnimal(updatedAnimal));
 
         const stockChanged =
           oldAnimal && oldAnimal.stock !== updatedAnimal.stock;

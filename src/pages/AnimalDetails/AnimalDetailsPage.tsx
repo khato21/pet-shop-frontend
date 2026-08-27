@@ -1,9 +1,13 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { getAnimalById } from "../../store/thunks/animalThunks";
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+import { useWebSocket } from "../../hooks/useWebSocket";
+
+import type { Animal } from "../../interfaces/animal.interface";
+import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import useWishlist from "../../hooks/useWishlist";
 
@@ -16,7 +20,9 @@ const AnimalDetailsPage = () => {
 
   const dispatch = useAppDispatch();
 
-  const { animals, loading, error } = useAppSelector((state) => state.animals);
+  const [animal, setAnimal] = useState<Animal | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const currency = useAppSelector((state) => state.currency.currency);
 
@@ -25,14 +31,72 @@ const AnimalDetailsPage = () => {
   const { addAnimal, removeAnimal, isInWishlist } = useWishlist();
 
   useEffect(() => {
-    if (id) {
-      dispatch(getAnimalById(id));
+    if (!id) {
+      return;
     }
+
+    const loadAnimal = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const result = await dispatch(getAnimalById(id)).unwrap();
+
+        setAnimal(result);
+      } catch (error) {
+        console.error("Failed to load animal:", error);
+        setError("Failed to load animal.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnimal();
   }, [dispatch, id]);
 
-  const animal = animals.find((animal) => animal.id === id);
+  const handleWebSocketMessage = useCallback(
+    async (message: WebSocketMessage) => {
+      if (
+        message.type === "RESOURCE_CHANGED" &&
+        message.source === "ADMIN" &&
+        message.action === "UPDATE" &&
+        message.resource === "animals" &&
+        message.id &&
+        message.id === id
+      ) {
+        console.log("🔥 Animal Details changed via WebSocket:", message.id);
 
-  if (loading && !animal) {
+        try {
+          const updatedAnimal = await dispatch(
+            getAnimalById(message.id),
+          ).unwrap();
+
+          console.log("🔥 UPDATED ANIMAL FROM GET:", updatedAnimal);
+
+          setAnimal(updatedAnimal);
+
+          console.log(
+            "🔥 Animal Details updated:",
+            updatedAnimal.name,
+            "Stock:",
+            updatedAnimal.stock,
+            "Image:",
+            updatedAnimal.imageUrl,
+          );
+        } catch (error) {
+          console.error(
+            "Failed to update animal details via WebSocket:",
+            error,
+          );
+        }
+      }
+    },
+    [dispatch, id],
+  );
+
+  useWebSocket(handleWebSocketMessage);
+
+  if (loading) {
     return <p>Loading animal...</p>;
   }
 
