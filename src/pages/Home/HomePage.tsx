@@ -4,11 +4,23 @@ import Hero from "../../components/Hero/Hero";
 import CategoriesPanel from "../../components/CategoriesPanel/CategoriesPanel";
 import PopularAnimals from "../../components/PopularAnimals/PopularAnimals";
 
+import { getAnimals } from "../../store/thunks/animalThunks";
+import { getCategories } from "../../store/thunks/categoryThunks";
+import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryThunks";
+
+import { useAppDispatch } from "../../hooks/hooks";
+
 import styles from "./HomePage.module.css";
 
 const HomePage = () => {
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const dispatch = useAppDispatch();
 
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    dispatch(getAnimals());
+    dispatch(getCategories());
+    dispatch(getAnimalWithCategories());
+  }, [dispatch]);
   useEffect(() => {
     const handleScroll = () => {
       setShowBackToTop(window.scrollY > 400);
@@ -34,7 +46,7 @@ const HomePage = () => {
 
       <CategoriesPanel />
 
-      <PopularAnimals showViewAll />
+      <PopularAnimals showViewAll={true} />
 
       {showBackToTop && (
         <button

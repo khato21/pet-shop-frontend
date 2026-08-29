@@ -20,7 +20,6 @@ const animalSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // GET ALL ANIMALS
       .addCase(getAnimals.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -33,8 +32,6 @@ const animalSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? "Failed to get animals";
       })
-
-      // GET ANIMAL BY ID
       .addCase(getAnimalById.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -56,9 +53,6 @@ const animalSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? "Failed to get animal";
       })
-
-      // UPDATE ANIMAL
-      // საჭიროა Buy Now-ის დროს stock-ის განახლებისთვის
       .addCase(updateAnimal.pending, (state) => {
         state.loading = true;
         state.error = null;

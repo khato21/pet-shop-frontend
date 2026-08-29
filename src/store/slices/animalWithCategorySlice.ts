@@ -34,7 +34,6 @@ const animalWithCategorySlice = createSlice({
           action.error.message ?? "Failed to get animals with categories";
       })
 
-      // GET ANIMAL WITH CATEGORY BY ID
       .addCase(getAnimalWithCategoryById.pending, (state) => {
         state.loading = true;
         state.error = null;

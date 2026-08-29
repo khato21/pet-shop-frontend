@@ -29,17 +29,15 @@ const notifyAnimalUpdated = (id: string): void => {
   const socket = new WebSocket(WEBSOCKET_URL);
 
   socket.onopen = () => {
-    const message = {
-      type: "RESOURCE_CHANGED",
-      source: "SHOP",
-      action: "UPDATE",
-      resource: "animals",
-      id,
-    };
-
-    console.log("📤 Shop WebSocket message sent:", message);
-
-    socket.send(JSON.stringify(message));
+    socket.send(
+      JSON.stringify({
+        type: "RESOURCE_CHANGED",
+        source: "SHOP",
+        action: "UPDATE",
+        resource: "animals",
+        id,
+      }),
+    );
 
     socket.close();
   };

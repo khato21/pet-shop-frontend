@@ -9,9 +9,8 @@ import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
 import { clearCart } from "../../store/slices/cartSlice";
-import { updateWishlistAnimal } from "../../store/slices/wishlistSlice";
-import { updateAnimal } from "../../store/thunks/animalThunks";
 import { createSale } from "../../store/thunks/saleThunks";
+import { updateAnimal } from "../../store/thunks/animalThunks";
 
 import styles from "./CheckoutPage.module.css";
 
@@ -61,50 +60,54 @@ const CheckoutPage = () => {
 
     try {
       for (const item of cart) {
-        const updatedStock = item.animal.stock - item.quantity;
+        const newStock = item.animal.stock - item.quantity;
 
-        const updatedAnimal = await dispatch(
+        if (newStock < 0) {
+          throw new Error(
+            `Not enough stock for ${item.animal.name}. Available: ${item.animal.stock}`,
+          );
+        }
+
+        await dispatch(
           updateAnimal({
             id: item.animal.id,
             animal: {
-              name: item.animal.name,
-              priceUSD: item.animal.priceUSD,
-              priceGEL: item.animal.priceGEL,
-              description: item.animal.description,
-              isPopular: item.animal.isPopular,
-              stock: updatedStock,
-              imageUrl: item.animal.imageUrl,
+              ...item.animal,
+              stock: newStock,
             },
           }),
         ).unwrap();
-
-        dispatch(updateWishlistAnimal(updatedAnimal));
-
-        await dispatch(
+      }
+      for (const item of cart) {
+        const createdSale = await dispatch(
           createSale({
             animalId: item.animal.id,
             quantity: item.quantity,
           }),
         ).unwrap();
-
         sendMessage(
           JSON.stringify({
             type: "RESOURCE_CHANGED",
             source: "SHOP",
-            action: "UPDATE",
-            resource: "animals",
-            id: item.animal.id,
+            action: "CREATE",
+            resource: "sales",
+            data: createdSale,
           }),
         );
       }
-
       dispatch(clearCart());
 
       toast.success("Order placed successfully!");
 
       navigate("/cart");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Checkout failed:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
     } finally {
       setBuying(false);
     }

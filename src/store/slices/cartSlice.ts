@@ -22,21 +22,19 @@ const cartSlice = createSlice({
         (item) => item.animal.id === action.payload.id,
       );
 
+      // თუ უკვე Cart-შია, ხელახლა დამატება quantity-ს არ ზრდის.
       if (existingItem) {
-        if (existingItem.quantity < action.payload.stock) {
-          existingItem.quantity += 1;
-        }
-      } else {
-        const newItem: CartItem = {
-          animal: action.payload,
-          quantity: 1,
-        };
-
-        state.cart.push(newItem);
+        return;
       }
+
+      const newItem: CartItem = {
+        animal: action.payload,
+        quantity: 1,
+      };
+
+      state.cart.push(newItem);
     },
 
-    // INCREASE QUANTITY
     increaseQuantity: (state, action: PayloadAction<string>) => {
       const item = state.cart.find(
         (cartItem) => cartItem.animal.id === action.payload,
@@ -78,9 +76,11 @@ const cartSlice = createSlice({
 
       if (existingItem) {
         existingItem.animal = action.payload;
+        if (existingItem.quantity > action.payload.stock) {
+          existingItem.quantity = Math.max(action.payload.stock, 1);
+        }
       }
     },
-
     clearCart: (state) => {
       state.cart = [];
     },

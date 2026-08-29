@@ -1,14 +1,12 @@
 import { Link } from "react-router-dom";
-import { toast } from "react-toastify";
 
 import type { Animal } from "../../interfaces/animal.interface";
 import type { Category } from "../../interfaces/category.interface";
 
-import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
+import { useAppSelector } from "../../hooks/hooks";
 
 import useWishlist from "../../hooks/useWishlist";
-
-import { addToCart } from "../../store/slices/cartSlice";
+import useCart from "../../hooks/useCart";
 
 import styles from "./AnimalCard.module.css";
 
@@ -18,18 +16,16 @@ interface AnimalCardProps {
 }
 
 const AnimalCard = ({ animal, categories = [] }: AnimalCardProps) => {
-  const dispatch = useAppDispatch();
-
   const currency = useAppSelector((state) => state.currency.currency);
 
   const cart = useAppSelector((state) => state.cart.cart);
 
   const { addAnimal, removeAnimal, isInWishlist } = useWishlist();
 
-  const handleAddToCart = () => {
-    dispatch(addToCart(animal));
+  const { addAnimal: addAnimalToCart } = useCart();
 
-    toast.success(`${animal.name} added to cart`);
+  const handleAddToCart = () => {
+    addAnimalToCart(animal);
   };
 
   const handleWishlistToggle = () => {
@@ -95,7 +91,7 @@ const AnimalCard = ({ animal, categories = [] }: AnimalCardProps) => {
           }`}
           type="button"
           onClick={handleAddToCart}
-          disabled={animal.stock === 0}
+          disabled={animal.stock === 0 || isInCart}
         >
           {isInCart ? "ADDED TO CART ✓" : "ADD TO CART"}
         </button>

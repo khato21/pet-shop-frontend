@@ -1,15 +1,9 @@
 import { useCallback, useEffect } from "react";
-
 import CategoryCard from "../../components/CategoryCard/CategoryCard";
-
 import { getCategories } from "../../store/thunks/categoryThunks";
-
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
-
 import { useWebSocket } from "../../hooks/useWebSocket";
-
 import type { WebSocketMessage } from "../../interfaces/websocket.interface";
-
 import styles from "./CategoriesPage.module.css";
 
 const CATEGORY_ORDER = [
@@ -43,12 +37,6 @@ const CategoriesPage = () => {
     loadCategories();
   }, [loadCategories]);
 
-  const handleWebSocketConnected = useCallback(() => {
-    console.log("SHOP WebSocket connected - synchronizing categories");
-
-    loadCategories(true);
-  }, [loadCategories]);
-
   const handleWebSocketMessage = useCallback(
     (message: WebSocketMessage) => {
       console.log("SHOP received WebSocket event:", message);
@@ -65,7 +53,7 @@ const CategoriesPage = () => {
     [loadCategories],
   );
 
-  useWebSocket(handleWebSocketMessage, handleWebSocketConnected);
+  useWebSocket(handleWebSocketMessage);
 
   const sortedCategories = [...categories].sort((a, b) => {
     const aIndex = CATEGORY_ORDER.indexOf(a.title);

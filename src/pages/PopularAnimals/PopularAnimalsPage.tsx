@@ -10,30 +10,32 @@ import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryTh
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
-import { selectAnimalsWithCategories } from "../../store/selectors/animalSelectors";
-
 import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
-import styles from "./PopularAnimalsPage.module.css";
+import styles from "../../pages/PopularAnimals/PopularAnimalsPage.module.css";
 
 const PopularAnimalsPage = () => {
   const dispatch = useAppDispatch();
 
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  const { loading: animalsLoading, error: animalsError } = useAppSelector(
-    (state) => state.animals,
-  );
+  const {
+    animals,
+    loading: animalsLoading,
+    error: animalsError,
+  } = useAppSelector((state) => state.animals);
 
-  const { loading: categoriesLoading, error: categoriesError } = useAppSelector(
-    (state) => state.categories,
-  );
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useAppSelector((state) => state.categories);
 
-  const { loading: relationsLoading, error: relationsError } = useAppSelector(
-    (state) => state.animalWithCategories,
-  );
-
-  const animalsWithCategories = useAppSelector(selectAnimalsWithCategories);
+  const {
+    animalWithCategories,
+    loading: relationsLoading,
+    error: relationsError,
+  } = useAppSelector((state) => state.animalWithCategories);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -45,22 +47,15 @@ const PopularAnimalsPage = () => {
     dispatch(getAnimalWithCategories());
   }, [dispatch]);
 
-  const handleWebSocketConnected = useCallback(() => {
-    console.log("SHOP WebSocket connected - synchronizing popular animals");
-
-    dispatch(getAnimals(true));
-    dispatch(getAnimalWithCategories(true));
-  }, [dispatch]);
-
   const handleWebSocketMessage = useCallback(
-    (message: WebSocketMessage) => {
+    async (message: WebSocketMessage) => {
       if (
         message.type === "RESOURCE_CHANGED" &&
         message.resource === "animals" &&
         (message.action === "CREATE" || message.action === "DELETE")
       ) {
-        dispatch(getAnimals(true));
-        dispatch(getAnimalWithCategories(true));
+        dispatch(getAnimals());
+        dispatch(getAnimalWithCategories());
 
         return;
       }
@@ -81,13 +76,15 @@ const PopularAnimalsPage = () => {
         message.resource === "animals_with_categories" &&
         (message.action === "CREATE" || message.action === "DELETE")
       ) {
-        dispatch(getAnimalWithCategories(true));
+        dispatch(getAnimalWithCategories());
+
+        return;
       }
     },
     [dispatch],
   );
 
-  useWebSocket(handleWebSocketMessage, handleWebSocketConnected);
+  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,11 +109,9 @@ const PopularAnimalsPage = () => {
 
   const error = animalsError || categoriesError || relationsError;
 
-  const popularAnimals = animalsWithCategories
-    .filter((item) => item.animal.isPopular)
-    .reverse();
+  const popularAnimals = animals.filter((animal) => animal.isPopular);
 
-  if (loading && animalsWithCategories.length === 0) {
+  if (loading && animals.length === 0) {
     return <p>Loading popular animals...</p>;
   }
 
@@ -134,13 +129,23 @@ const PopularAnimalsPage = () => {
         </Link>
 
         <div className={styles.list}>
-          {popularAnimals.map(({ animal, categories }) => (
-            <AnimalCard
-              key={animal.id}
-              animal={animal}
-              categories={categories}
-            />
-          ))}
+          {popularAnimals.map((animal) => {
+            const relatedCategoryIds = animalWithCategories
+              .filter((relation) => relation.animal_id === animal.id)
+              .map((relation) => relation.category_id);
+
+            const animalCategories = categories.filter((category) =>
+              relatedCategoryIds.includes(category.id),
+            );
+
+            return (
+              <AnimalCard
+                key={animal.id}
+                animal={animal}
+                categories={animalCategories}
+              />
+            );
+          })}
         </div>
       </section>
 

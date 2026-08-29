@@ -50,15 +50,8 @@ const AnimalsPage = () => {
     dispatch(getAnimalWithCategories());
   }, [dispatch]);
 
-  const handleWebSocketConnected = useCallback(() => {
-    console.log("SHOP WebSocket connected");
-  }, []);
-
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
-      // CREATE / DELETE
-      // Admin-ში ცხოველის შექმნის ან წაშლის შემდეგ
-      // Shop თავიდან იღებს ცხოველების სიას.
       if (
         message.type === "RESOURCE_CHANGED" &&
         message.resource === "animals" &&
@@ -72,9 +65,6 @@ const AnimalsPage = () => {
         return;
       }
 
-      // UPDATE
-      // კონკრეტული ცხოველის ცვლილებისას
-      // მხოლოდ ის ცხოველი წამოვიღოთ თავიდან.
       if (
         message.type === "RESOURCE_CHANGED" &&
         message.resource === "animals" &&
@@ -134,7 +124,7 @@ const AnimalsPage = () => {
     [animals, cart, wishlist, dispatch],
   );
 
-  useWebSocket(handleWebSocketMessage, handleWebSocketConnected);
+  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -175,7 +165,6 @@ const AnimalsPage = () => {
 
   return (
     <main className={styles.page}>
-      {/* PopularAnimals-ს არ ვეხებით */}
       <PopularAnimals />
 
       <section className={styles.animalsSection}>

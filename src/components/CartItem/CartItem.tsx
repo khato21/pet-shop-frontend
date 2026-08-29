@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 
 import useCart from "../../hooks/useCart";
-
 import { useAppSelector } from "../../hooks/hooks";
 
 import type { CartItem as CartItemType } from "../../interfaces/cart.interface";
@@ -21,7 +20,11 @@ const CartItem = ({ item }: CartItemProps) => {
   const { animal, quantity } = item;
 
   const handleDecrease = () => {
-    decreaseAnimalQuantity(animal.id);
+    if (quantity <= 1) {
+      removeAnimal(animal.id);
+    } else {
+      decreaseAnimalQuantity(animal.id);
+    }
   };
 
   const handleIncrease = () => {
@@ -33,6 +36,8 @@ const CartItem = ({ item }: CartItemProps) => {
   };
 
   const price = currency === "GEL" ? animal.priceGEL : animal.priceUSD;
+
+  const availableStock = Math.max(animal.stock - quantity, 0);
 
   return (
     <article className={styles.item}>
@@ -54,17 +59,18 @@ const CartItem = ({ item }: CartItemProps) => {
         </Link>
 
         <p className={styles.price}>
-          {price} {currency}
+          {price.toFixed(2)} {currency}
         </p>
 
-        <p className={styles.stock}>Stock: {animal.stock}</p>
+        <p className={styles.stock}>
+          Available: {availableStock} {availableStock === 0 && "(Max reached)"}
+        </p>
       </div>
 
       <div className={styles.quantity}>
         <button
           type="button"
           onClick={handleDecrease}
-          disabled={quantity === 1}
           aria-label={`Decrease quantity of ${animal.name}`}
         >
           −

@@ -53,12 +53,6 @@ const CategoryDetails = () => {
     loadCategoryData();
   }, [loadCategoryData]);
 
-  const handleWebSocketConnected = useCallback(() => {
-    console.log("SHOP WebSocket connected - synchronizing category details");
-
-    loadCategoryData(true);
-  }, [loadCategoryData]);
-
   const handleWebSocketMessage = useCallback(
     (message: WebSocketMessage) => {
       console.log("SHOP received WebSocket event:", message);
@@ -66,11 +60,6 @@ const CategoryDetails = () => {
       if (message.type !== "RESOURCE_CHANGED") {
         return;
       }
-
-      /*
-       * ADMIN-ში ცხოველის შექმნა ან წაშლა
-       * → Shop თავიდან იღებს animals-ს და relations-ს.
-       */
       if (
         message.resource === "animals" &&
         (message.action === "CREATE" || message.action === "DELETE")
@@ -84,12 +73,6 @@ const CategoryDetails = () => {
 
         return;
       }
-
-      /*
-       * ADMIN-ში ცხოველის UPDATE
-       * → Shop თავიდან იღებს animals-საც და relations-საც,
-       * რათა ცვლილება აუცილებლად აისახოს მიმდინარე გვერდზე.
-       */
       if (message.resource === "animals" && message.action === "UPDATE") {
         console.log(
           "SHOP: animal updated, synchronizing animals and relations...",
@@ -100,7 +83,6 @@ const CategoryDetails = () => {
 
         return;
       }
-
       if (
         message.resource === "categories" &&
         (message.action === "CREATE" ||
@@ -115,7 +97,6 @@ const CategoryDetails = () => {
 
         return;
       }
-
       if (
         message.resource === "animals_with_categories" &&
         (message.action === "CREATE" || message.action === "DELETE")
@@ -128,7 +109,6 @@ const CategoryDetails = () => {
 
         return;
       }
-
       if (
         message.resource === "animals_with_categories" &&
         message.action === "UPDATE"
@@ -143,7 +123,7 @@ const CategoryDetails = () => {
     [dispatch],
   );
 
-  useWebSocket(handleWebSocketMessage, handleWebSocketConnected);
+  useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     const handleWindowFocus = () => {

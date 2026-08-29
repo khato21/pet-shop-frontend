@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { toast } from "react-toastify";
 
 import { getAnimalById } from "../../store/thunks/animalThunks";
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
@@ -10,8 +9,7 @@ import type { Animal } from "../../interfaces/animal.interface";
 import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import useWishlist from "../../hooks/useWishlist";
-
-import { addToCart } from "../../store/slices/cartSlice";
+import useCart from "../../hooks/useCart";
 
 import styles from "./AnimalDetailsPage.module.css";
 
@@ -29,6 +27,8 @@ const AnimalDetailsPage = () => {
   const cart = useAppSelector((state) => state.cart.cart);
 
   const { addAnimal, removeAnimal, isInWishlist } = useWishlist();
+
+  const { addAnimal: addAnimalToCart } = useCart();
 
   useEffect(() => {
     if (!id) {
@@ -70,8 +70,6 @@ const AnimalDetailsPage = () => {
           const updatedAnimal = await dispatch(
             getAnimalById(message.id),
           ).unwrap();
-
-          console.log("🔥 UPDATED ANIMAL FROM GET:", updatedAnimal);
 
           setAnimal(updatedAnimal);
 
@@ -115,9 +113,7 @@ const AnimalDetailsPage = () => {
   const isInCart = cart.some((item) => item.animal.id === animal.id);
 
   const handleAddToCart = () => {
-    dispatch(addToCart(animal));
-
-    toast.success(`${animal.name} added to cart`);
+    addAnimalToCart(animal);
   };
 
   const handleWishlistToggle = () => {
@@ -163,7 +159,7 @@ const AnimalDetailsPage = () => {
               }`}
               type="button"
               onClick={handleAddToCart}
-              disabled={animal.stock === 0}
+              disabled={animal.stock === 0 || isInCart}
             >
               {isInCart ? "ADDED TO CART ✓" : "ADD TO CART"}
             </button>

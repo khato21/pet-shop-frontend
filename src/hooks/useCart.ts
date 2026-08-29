@@ -25,8 +25,8 @@ const useCart = () => {
 
     const existingItem = cart.find((item) => item.animal.id === animal.id);
 
-    if (existingItem && existingItem.quantity >= animal.stock) {
-      toast.error("Cannot add more — maximum stock reached");
+    if (existingItem) {
+      toast.info(`${animal.name} is already in your cart`);
       return false;
     }
 
@@ -40,19 +40,21 @@ const useCart = () => {
   const addAllAnimals = (animals: Animal[]) => {
     let addedCount = 0;
 
+    const cartIds = new Set(cart.map((item) => item.animal.id));
+
     animals.forEach((animal) => {
       if (animal.stock <= 0) {
         return;
       }
 
-      const existingItem = cart.find((item) => item.animal.id === animal.id);
-
-      if (existingItem && existingItem.quantity >= animal.stock) {
+      if (cartIds.has(animal.id)) {
         return;
       }
 
       dispatch(addToCart(animal));
-      addedCount++;
+
+      cartIds.add(animal.id);
+      addedCount += 1;
     });
 
     if (addedCount === animals.length) {
@@ -71,7 +73,6 @@ const useCart = () => {
       toast.error("Animal not found in cart");
       return;
     }
-
     if (item.quantity >= item.animal.stock) {
       toast.error("Cannot increase quantity — maximum stock reached");
       return;
