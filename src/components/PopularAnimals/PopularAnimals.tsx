@@ -78,6 +78,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSalesMap(map);
   }, [sales]);
 
+  // 1. WebSocket handler - ითვალისწინებს isPopular სტატუსის დაკარგვას/მიღებას
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
       if (
@@ -86,24 +87,37 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
         message.action === "UPDATE" &&
         message.id
       ) {
-        const isInSlider = sliderAnimals.some(
-          (animal) => animal.id === message.id,
-        );
-
-        if (!isInSlider) {
-          return;
-        }
-
         try {
           const updatedAnimal = await dispatch(
             getAnimalById(message.id),
           ).unwrap();
 
-          setSliderAnimals((currentSliderAnimals) =>
-            currentSliderAnimals.map((animal) =>
-              animal.id === updatedAnimal.id ? updatedAnimal : animal,
-            ),
-          );
+          setSliderAnimals((currentSlider) => {
+            const isInSlider = currentSlider.some(
+              (animal) => animal.id === updatedAnimal.id,
+            );
+
+            // შემთხვევა ა: ცხოველს მოეხსნა პოპულარობის სტატუსი (isPopular = false)
+            if (!updatedAnimal.isPopular) {
+              if (!isInSlider) return currentSlider; // ისედაც არ იყო სლაიდერში
+              // ამოვიღოთ სლაიდერიდან
+              return currentSlider.filter((a) => a.id !== updatedAnimal.id);
+            }
+
+            // შემთხვევა ბ: ცხოველი არის სლაიდერში და განახლდა მისი ინფო
+            if (isInSlider) {
+              return currentSlider.map((animal) =>
+                animal.id === updatedAnimal.id ? updatedAnimal : animal,
+              );
+            }
+
+            // შემთხვევა გ: გახდა პოპულარული (isPopular = true) და სლაიდერში 5-ზე ნაკლებია
+            if (currentSlider.length < 5) {
+              return [...currentSlider, updatedAnimal];
+            }
+
+            return currentSlider;
+          });
         } catch (error) {
           console.error(
             "Failed to update popular animal via WebSocket:",
@@ -137,59 +151,81 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
         [animalId]: (prev[animalId] ?? 0) + quantity,
       }));
     },
-    [dispatch, sliderAnimals],
+    [dispatch],
   );
 
   useWebSocket(handleWebSocketMessage);
 
+  // 2. საწყისი ჩატვირთვა
   useEffect(() => {
     if (animals.length === 0 || sliderAnimals.length > 0) return;
 
     const popular = animals.filter((a) => a.isPopular).slice(0, 5);
-
     setSliderAnimals(popular);
   }, [animals, sliderAnimals.length]);
 
+  // 3. Redux state-ის ცვლილებისას სლაიდერის გაფილტვრა და განახლება
   useEffect(() => {
     if (animals.length === 0 || sliderAnimals.length === 0) return;
 
-    setSliderAnimals((currentSliderAnimals) => {
+    setSliderAnimals((currentSlider) => {
       let hasChanges = false;
 
-      const updatedSliderAnimals = currentSliderAnimals.map((sliderAnimal) => {
-        const updatedAnimal = animals.find(
-          (animal) => animal.id === sliderAnimal.id,
-        );
-
-        if (updatedAnimal && updatedAnimal !== sliderAnimal) {
+      // 1. ჯერ ვფილტრავთ იმ ცხოველებს, რომლებსაც isPopular გახდა false
+      const filteredSlider = currentSlider.filter((sliderAnimal) => {
+        const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
+        // თუ Redux-ში ეს ცხოველი აღარ არის პოპულარული, ვშლით სლაიდერიდან
+        if (reduxAnimal && !reduxAnimal.isPopular) {
           hasChanges = true;
-          return updatedAnimal;
+          return false;
+        }
+        return true;
+      });
+
+      // 2. ვანახლებთ მონაცემებს დარჩენილი ცხოველებისთვის
+      const updatedSlider = filteredSlider.map((sliderAnimal) => {
+        const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
+
+        if (
+          reduxAnimal &&
+          JSON.stringify(reduxAnimal) !== JSON.stringify(sliderAnimal)
+        ) {
+          hasChanges = true;
+          return reduxAnimal;
         }
 
         return sliderAnimal;
       });
 
-      return hasChanges ? updatedSliderAnimals : currentSliderAnimals;
+      return hasChanges ? updatedSlider : currentSlider;
     });
   }, [animals]);
 
+  // 4. თუ სლაიდერში 5-ზე ნაკლები ცხოველი დარჩა (ამოშლის გამო) ან გაყიდვებით ჩანაცვლებაა საჭირო
   useEffect(() => {
-    if (animals.length === 0 || sliderAnimals.length === 0) return;
+    if (animals.length === 0) return;
 
     const popularAnimals = animals.filter((a) => a.isPopular);
-
     const sliderIds = new Set(sliderAnimals.map((a) => a.id));
 
     const outsideAnimals = popularAnimals.filter((a) => !sliderIds.has(a.id));
 
-    if (outsideAnimals.length === 0) return;
+    // ა) თუ სლაიდერში 5-ზე ნაკლებია და გარეთ არის პოპულარული ცხოველები — შევავსოთ 5-მდე
+    if (sliderAnimals.length < 5 && outsideAnimals.length > 0) {
+      const neededCount = 5 - sliderAnimals.length;
+      const animalsToAdd = outsideAnimals.slice(0, neededCount);
+      setSliderAnimals((prev) => [...prev, ...animalsToAdd]);
+      return;
+    }
 
+    if (sliderAnimals.length === 0 || outsideAnimals.length === 0) return;
+
+    // ბ) გაყიდვების მიხედვით ყველაზე პოპულარულის შეყვანა სლაიდერში
     let topOutsideAnimal: Animal | null = null;
     let topOutsideSales = -1;
 
     for (const animal of outsideAnimals) {
       const currentSales = salesMap[animal.id] ?? 0;
-
       if (currentSales > topOutsideSales) {
         topOutsideSales = currentSales;
         topOutsideAnimal = animal;
@@ -203,7 +239,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
     for (let i = 1; i < sliderAnimals.length; i++) {
       const currentSales = salesMap[sliderAnimals[i].id] ?? 0;
-
       if (currentSales < minSales) {
         minSales = currentSales;
         minIndex = i;
@@ -212,9 +247,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
     if (topOutsideSales > minSales) {
       const nextSlider = [...sliderAnimals];
-
       nextSlider[minIndex] = topOutsideAnimal;
-
       setSliderAnimals(nextSlider);
     }
   }, [salesMap, animals, sliderAnimals]);
@@ -224,7 +257,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   }, [sliderAnimals]);
 
   const loading = animalsLoading || categoriesLoading || relationsLoading;
-
   const error = animalsError || categoriesError || relationsError;
 
   if (loading && animals.length === 0) {
