@@ -34,8 +34,9 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   const dispatch = useAppDispatch();
   const swiperRef = useRef<SwiperInstance | null>(null);
 
-  const [sliderAnimalIds, setSliderAnimalIds] = useState<string[]>([]);
+  const [sliderAnimals, setSliderAnimals] = useState<Animal[]>([]);
   const [salesMap, setSalesMap] = useState<Record<string, number>>({});
+  const [initialDataReady, setInitialDataReady] = useState(false);
 
   const {
     animals,
@@ -60,16 +61,25 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   } = useAppSelector((state) => state.animalWithCategories);
 
   useEffect(() => {
-    dispatch(getAnimals(true));
-    dispatch(getCategories());
-    dispatch(getAnimalWithCategories());
-    dispatch(getSales(true));
+    const loadInitialData = async () => {
+      await Promise.all([
+        dispatch(getAnimals()),
+        dispatch(getSales()),
+        dispatch(getCategories()),
+        dispatch(getAnimalWithCategories()),
+      ]);
+
+      setInitialDataReady(true);
+    };
+
+    loadInitialData();
   }, [dispatch]);
 
   useEffect(() => {
     if (!sales) return;
 
     const map: Record<string, number> = {};
+
     sales.forEach((s) => {
       if (s.animalId) {
         map[s.animalId] = (map[s.animalId] ?? 0) + (s.quantity || 1);
@@ -92,17 +102,38 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             getAnimalById(message.id),
           ).unwrap();
 
-          if (!updatedAnimal.isPopular) {
-            setSliderAnimalIds((prev) =>
-              prev.filter((id) => id !== updatedAnimal.id),
+          setSliderAnimals((currentSlider) => {
+            const isInSlider = currentSlider.some(
+              (animal) => animal.id === updatedAnimal.id,
             );
-          }
+
+            if (!updatedAnimal.isPopular) {
+              if (!isInSlider) return currentSlider;
+
+              return currentSlider.filter(
+                (animal) => animal.id !== updatedAnimal.id,
+              );
+            }
+
+            if (isInSlider) {
+              return currentSlider.map((animal) =>
+                animal.id === updatedAnimal.id ? updatedAnimal : animal,
+              );
+            }
+
+            if (currentSlider.length < 5) {
+              return [...currentSlider, updatedAnimal];
+            }
+
+            return currentSlider;
+          });
         } catch (error) {
           console.error(
             "Failed to update popular animal via WebSocket:",
             error,
           );
         }
+
         return;
       }
 
@@ -115,6 +146,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
       }
 
       const rawMessage = message as any;
+
       const saleData: SaleWebSocketData | undefined =
         rawMessage.data ?? rawMessage.payload?.data;
 
@@ -134,72 +166,128 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
-    if (animals.length === 0 || !sales) return;
+    if (!initialDataReady) return;
+    if (animals.length === 0) return;
+    if (salesLoading) return;
+    if (sliderAnimals.length > 0) return;
 
-    const sortedPopularAnimals = [...animals]
-      .filter((a) => a.isPopular)
-      .sort((a, b) => a.id.localeCompare(b.id));
+    const popularAnimals = animals.filter((animal) => animal.isPopular);
 
-    setSliderAnimalIds((currentIds) => {
-      if (currentIds.length === 0) {
-        return sortedPopularAnimals.slice(0, 5).map((a) => a.id);
-      }
+    const sortedPopularAnimals = [...popularAnimals].sort(
+      (a, b) => (salesMap[b.id] ?? 0) - (salesMap[a.id] ?? 0),
+    );
 
-      const validCurrentIds = currentIds.filter((id) => {
-        const animal = animals.find((a) => a.id === id);
-        return animal && animal.isPopular;
+    setSliderAnimals(sortedPopularAnimals.slice(0, 5));
+  }, [initialDataReady, animals, salesLoading, salesMap, sliderAnimals.length]);
+
+  useEffect(() => {
+    if (animals.length === 0 || sliderAnimals.length === 0) return;
+
+    setSliderAnimals((currentSlider) => {
+      let hasChanges = false;
+
+      const filteredSlider = currentSlider.filter((sliderAnimal) => {
+        const reduxAnimal = animals.find(
+          (animal) => animal.id === sliderAnimal.id,
+        );
+
+        if (reduxAnimal && !reduxAnimal.isPopular) {
+          hasChanges = true;
+          return false;
+        }
+
+        return true;
       });
 
-      const currentSet = new Set(validCurrentIds);
-      const outsideAnimals = sortedPopularAnimals.filter(
-        (a) => !currentSet.has(a.id),
-      );
+      const updatedSlider = filteredSlider.map((sliderAnimal) => {
+        const reduxAnimal = animals.find(
+          (animal) => animal.id === sliderAnimal.id,
+        );
 
-      if (validCurrentIds.length < 5 && outsideAnimals.length > 0) {
-        const needed = 5 - validCurrentIds.length;
-        const toAdd = outsideAnimals.slice(0, needed).map((a) => a.id);
-        return [...validCurrentIds, ...toAdd];
-      }
-
-      if (validCurrentIds.length === 5 && outsideAnimals.length > 0) {
-        let topOutsideAnimal: Animal | null = null;
-        let topOutsideSales = -1;
-
-        for (const animal of outsideAnimals) {
-          const currentSales = salesMap[animal.id] ?? 0;
-          if (currentSales > topOutsideSales) {
-            topOutsideSales = currentSales;
-            topOutsideAnimal = animal;
-          }
+        if (
+          reduxAnimal &&
+          JSON.stringify(reduxAnimal) !== JSON.stringify(sliderAnimal)
+        ) {
+          hasChanges = true;
+          return reduxAnimal;
         }
 
-        if (topOutsideAnimal && topOutsideSales > 0) {
-          let minIndex = 0;
-          let minSales = salesMap[validCurrentIds[0]] ?? 0;
+        return sliderAnimal;
+      });
 
-          for (let i = 1; i < validCurrentIds.length; i++) {
-            const currentSales = salesMap[validCurrentIds[i]] ?? 0;
-            if (currentSales < minSales) {
-              minSales = currentSales;
-              minIndex = i;
-            }
-          }
-
-          if (topOutsideSales > minSales) {
-            const nextIds = [...validCurrentIds];
-            nextIds[minIndex] = topOutsideAnimal.id;
-            return nextIds;
-          }
-        }
-      }
-
-      return validCurrentIds;
+      return hasChanges ? updatedSlider : currentSlider;
     });
-  }, [animals, sales, salesMap]);
+  }, [animals]);
 
-  const sliderAnimals = sliderAnimalIds
-    .map((id) => animals.find((a) => a.id === id))
-    .filter((a): a is Animal => Boolean(a));
+  useEffect(() => {
+    if (!initialDataReady) return;
+    if (animals.length === 0) return;
+    if (sliderAnimals.length === 0) return;
+
+    const popularAnimals = animals.filter((a) => a.isPopular);
+
+    const sliderIds = new Set(sliderAnimals.map((a) => a.id));
+
+    const outsideAnimals = popularAnimals.filter((a) => !sliderIds.has(a.id));
+
+    if (sliderAnimals.length < 5 && outsideAnimals.length > 0) {
+      const neededCount = 5 - sliderAnimals.length;
+
+      const animalsToAdd = [...outsideAnimals]
+        .sort((a, b) => (salesMap[b.id] ?? 0) - (salesMap[a.id] ?? 0))
+        .slice(0, neededCount);
+
+      setSliderAnimals((prev) => {
+        const existingIds = new Set(prev.map((animal) => animal.id));
+
+        const newAnimals = animalsToAdd.filter(
+          (animal) => !existingIds.has(animal.id),
+        );
+
+        return [...prev, ...newAnimals];
+      });
+
+      return;
+    }
+
+    if (sliderAnimals.length === 0 || outsideAnimals.length === 0) {
+      return;
+    }
+
+    let topOutsideAnimal: Animal | null = null;
+    let topOutsideSales = -1;
+
+    for (const animal of outsideAnimals) {
+      const currentSales = salesMap[animal.id] ?? 0;
+
+      if (currentSales > topOutsideSales) {
+        topOutsideSales = currentSales;
+        topOutsideAnimal = animal;
+      }
+    }
+
+    if (!topOutsideAnimal || topOutsideSales <= 0) return;
+
+    let minIndex = 0;
+    let minSales = salesMap[sliderAnimals[0].id] ?? 0;
+
+    for (let i = 1; i < sliderAnimals.length; i++) {
+      const currentSales = salesMap[sliderAnimals[i].id] ?? 0;
+
+      if (currentSales < minSales) {
+        minSales = currentSales;
+        minIndex = i;
+      }
+    }
+
+    if (topOutsideSales > minSales) {
+      const nextSlider = [...sliderAnimals];
+
+      nextSlider[minIndex] = topOutsideAnimal;
+
+      setSliderAnimals(nextSlider);
+    }
+  }, [initialDataReady, salesMap, animals, sliderAnimals]);
 
   useEffect(() => {
     swiperRef.current?.update();
@@ -207,6 +295,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   const loading =
     animalsLoading || categoriesLoading || relationsLoading || salesLoading;
+
   const error = animalsError || categoriesError || relationsError;
 
   if (loading && animals.length === 0) {
@@ -242,7 +331,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
           className={styles.swiper}
           spaceBetween={24}
           slidesPerView={1}
-          loop={false}
           observer
           observeParents
           onSwiper={(swiper) => {
