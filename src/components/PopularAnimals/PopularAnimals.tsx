@@ -78,7 +78,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSalesMap(map);
   }, [sales]);
 
-  // 1. WebSocket handler - ითვალისწინებს isPopular სტატუსის დაკარგვას/მიღებას
+  // 1. WebSocket handler — მკაცრად ზღუდავს 5 ელემენტს
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
       if (
@@ -97,23 +97,22 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
               (animal) => animal.id === updatedAnimal.id,
             );
 
-            // შემთხვევა ა: ცხოველს მოეხსნა პოპულარობის სტატუსი (isPopular = false)
+            // თუ isPopular გახდა false -> ამოვიღოთ სლაიდერიდან
             if (!updatedAnimal.isPopular) {
-              if (!isInSlider) return currentSlider; // ისედაც არ იყო სლაიდერში
-              // ამოვიღოთ სლაიდერიდან
+              if (!isInSlider) return currentSlider;
               return currentSlider.filter((a) => a.id !== updatedAnimal.id);
             }
 
-            // შემთხვევა ბ: ცხოველი არის სლაიდერში და განახლდა მისი ინფო
+            // თუ სლაიდერშია -> განვახლოთ ინფო
             if (isInSlider) {
               return currentSlider.map((animal) =>
                 animal.id === updatedAnimal.id ? updatedAnimal : animal,
               );
             }
 
-            // შემთხვევა გ: გახდა პოპულარული (isPopular = true) და სლაიდერში 5-ზე ნაკლებია
+            // თუ სლაიდერში 5-ზე ნაკლებია -> დავამატოთ
             if (currentSlider.length < 5) {
-              return [...currentSlider, updatedAnimal];
+              return [...currentSlider, updatedAnimal].slice(0, 5);
             }
 
             return currentSlider;
@@ -137,7 +136,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
       }
 
       const rawMessage = message as any;
-
       const saleData: SaleWebSocketData | undefined =
         rawMessage.data ?? rawMessage.payload?.data;
 
@@ -156,7 +154,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   useWebSocket(handleWebSocketMessage);
 
-  // 2. საწყისი ჩატვირთვა
+  // 2. საწყისი დასეტვა: მკაცრად მაქსიმუმ 5 პოპულარული ცხოველი!
   useEffect(() => {
     if (animals.length === 0 || sliderAnimals.length > 0) return;
 
@@ -164,17 +162,16 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSliderAnimals(popular);
   }, [animals, sliderAnimals.length]);
 
-  // 3. Redux state-ის ცვლილებისას სლაიდერის გაფილტვრა და განახლება
+  // 3. Redux state-ის ცვლილებისას სლაიდერის გაფილტვრა
   useEffect(() => {
     if (animals.length === 0 || sliderAnimals.length === 0) return;
 
     setSliderAnimals((currentSlider) => {
       let hasChanges = false;
 
-      // 1. ჯერ ვფილტრავთ იმ ცხოველებს, რომლებსაც isPopular გახდა false
+      // წაშლა, თუ isPopular გახდა false
       const filteredSlider = currentSlider.filter((sliderAnimal) => {
         const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
-        // თუ Redux-ში ეს ცხოველი აღარ არის პოპულარული, ვშლით სლაიდერიდან
         if (reduxAnimal && !reduxAnimal.isPopular) {
           hasChanges = true;
           return false;
@@ -182,10 +179,9 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
         return true;
       });
 
-      // 2. ვანახლებთ მონაცემებს დარჩენილი ცხოველებისთვის
+      // მონაცემების განახლება
       const updatedSlider = filteredSlider.map((sliderAnimal) => {
         const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
-
         if (
           reduxAnimal &&
           JSON.stringify(reduxAnimal) !== JSON.stringify(sliderAnimal)
@@ -193,34 +189,32 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
           hasChanges = true;
           return reduxAnimal;
         }
-
         return sliderAnimal;
       });
 
-      return hasChanges ? updatedSlider : currentSlider;
+      return hasChanges ? updatedSlider.slice(0, 5) : currentSlider;
     });
   }, [animals]);
 
-  // 4. თუ სლაიდერში 5-ზე ნაკლები ცხოველი დარჩა (ამოშლის გამო) ან გაყიდვებით ჩანაცვლებაა საჭირო
+  // 4. გაყიდვებით ჩანაცვლების ლოგიკა (მკაცრად მაქსიმუმ 5 ცხოველის ფარგლებში)
   useEffect(() => {
     if (animals.length === 0) return;
 
     const popularAnimals = animals.filter((a) => a.isPopular);
     const sliderIds = new Set(sliderAnimals.map((a) => a.id));
-
     const outsideAnimals = popularAnimals.filter((a) => !sliderIds.has(a.id));
 
-    // ა) თუ სლაიდერში 5-ზე ნაკლებია და გარეთ არის პოპულარული ცხოველები — შევავსოთ 5-მდე
+    // თუ სლაიდერში 5-ზე ნაკლებია -> შევავსოთ 5-მდე
     if (sliderAnimals.length < 5 && outsideAnimals.length > 0) {
       const neededCount = 5 - sliderAnimals.length;
       const animalsToAdd = outsideAnimals.slice(0, neededCount);
-      setSliderAnimals((prev) => [...prev, ...animalsToAdd]);
+      setSliderAnimals((prev) => [...prev, ...animalsToAdd].slice(0, 5));
       return;
     }
 
     if (sliderAnimals.length === 0 || outsideAnimals.length === 0) return;
 
-    // ბ) გაყიდვების მიხედვით ყველაზე პოპულარულის შეყვანა სლაიდერში
+    // იპოვე სლაიდერის გარეთ ყველაზე მეტად გაყიდული
     let topOutsideAnimal: Animal | null = null;
     let topOutsideSales = -1;
 
@@ -234,6 +228,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
     if (!topOutsideAnimal || topOutsideSales <= 0) return;
 
+    // იპოვე სლაიდერის შიგნით ყველაზე ნაკლებად გაყიდული
     let minIndex = 0;
     let minSales = salesMap[sliderAnimals[0].id] ?? 0;
 
@@ -245,10 +240,11 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
       }
     }
 
+    // ჩანაცვლება: თუ გარეთას მეტი გაყიდვა აქვს, ჩაანაცვლე შიგნითა ყველაზე ნაკლები
     if (topOutsideSales > minSales) {
       const nextSlider = [...sliderAnimals];
       nextSlider[minIndex] = topOutsideAnimal;
-      setSliderAnimals(nextSlider);
+      setSliderAnimals(nextSlider.slice(0, 5)); // ყოველთვის 5 ელემენტი!
     }
   }, [salesMap, animals, sliderAnimals]);
 
@@ -292,6 +288,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
           className={styles.swiper}
           spaceBetween={24}
           slidesPerView={1}
+          loop={false} // 👈 ეთითება false, რომ უსასრულოდ არ იტრიალოს
           observer
           observeParents
           onSwiper={(swiper) => {
