@@ -34,7 +34,8 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   const dispatch = useAppDispatch();
   const swiperRef = useRef<SwiperInstance | null>(null);
 
-  const [sliderAnimals, setSliderAnimals] = useState<Animal[]>([]);
+  // სლაიდერში ვინახავთ მხოლოდ ID-ების მასივს (მაქსიმუმ 5), რათა State ყოველთვის Redux-თან იყოს სინქრონში
+  const [sliderAnimalIds, setSliderAnimalIds] = useState<string[]>([]);
   const [salesMap, setSalesMap] = useState<Record<string, number>>({});
 
   const {
@@ -57,6 +58,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     error: relationsError,
   } = useAppSelector((state) => state.animalWithCategories);
 
+  // 1. პირველადი ჩატვირთვა
   useEffect(() => {
     dispatch(getAnimals());
     dispatch(getCategories());
@@ -64,11 +66,11 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     dispatch(getSales());
   }, [dispatch]);
 
+  // 2. salesMap-ის შევსება
   useEffect(() => {
     if (!sales) return;
 
     const map: Record<string, number> = {};
-
     sales.forEach((s) => {
       if (s.animalId) {
         map[s.animalId] = (map[s.animalId] ?? 0) + (s.quantity || 1);
@@ -78,7 +80,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSalesMap(map);
   }, [sales]);
 
-  // 1. WebSocket handler — მკაცრად ზღუდავს 5 ელემენტს
+  // 3. WebSocket Handler
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
       if (
@@ -92,38 +94,18 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             getAnimalById(message.id),
           ).unwrap();
 
-          setSliderAnimals((currentSlider) => {
-            const isInSlider = currentSlider.some(
-              (animal) => animal.id === updatedAnimal.id,
+          // თუ ცხოველს მოეხსნა პოპულარობა (isPopular: false), ამოვიღოთ სლაიდერიდან
+          if (!updatedAnimal.isPopular) {
+            setSliderAnimalIds((prev) =>
+              prev.filter((id) => id !== updatedAnimal.id),
             );
-
-            // თუ isPopular გახდა false -> ამოვიღოთ სლაიდერიდან
-            if (!updatedAnimal.isPopular) {
-              if (!isInSlider) return currentSlider;
-              return currentSlider.filter((a) => a.id !== updatedAnimal.id);
-            }
-
-            // თუ სლაიდერშია -> განვახლოთ ინფო
-            if (isInSlider) {
-              return currentSlider.map((animal) =>
-                animal.id === updatedAnimal.id ? updatedAnimal : animal,
-              );
-            }
-
-            // თუ სლაიდერში 5-ზე ნაკლებია -> დავამატოთ
-            if (currentSlider.length < 5) {
-              return [...currentSlider, updatedAnimal].slice(0, 5);
-            }
-
-            return currentSlider;
-          });
+          }
         } catch (error) {
           console.error(
             "Failed to update popular animal via WebSocket:",
             error,
           );
         }
-
         return;
       }
 
@@ -154,99 +136,80 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   useWebSocket(handleWebSocketMessage);
 
-  // 2. საწყისი დასეტვა: მკაცრად მაქსიმუმ 5 პოპულარული ცხოველი!
-  useEffect(() => {
-    if (animals.length === 0 || sliderAnimals.length > 0) return;
-
-    const popular = animals.filter((a) => a.isPopular).slice(0, 5);
-    setSliderAnimals(popular);
-  }, [animals, sliderAnimals.length]);
-
-  // 3. Redux state-ის ცვლილებისას სლაიდერის გაფილტვრა
-  useEffect(() => {
-    if (animals.length === 0 || sliderAnimals.length === 0) return;
-
-    setSliderAnimals((currentSlider) => {
-      let hasChanges = false;
-
-      // წაშლა, თუ isPopular გახდა false
-      const filteredSlider = currentSlider.filter((sliderAnimal) => {
-        const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
-        if (reduxAnimal && !reduxAnimal.isPopular) {
-          hasChanges = true;
-          return false;
-        }
-        return true;
-      });
-
-      // მონაცემების განახლება
-      const updatedSlider = filteredSlider.map((sliderAnimal) => {
-        const reduxAnimal = animals.find((a) => a.id === sliderAnimal.id);
-        if (
-          reduxAnimal &&
-          JSON.stringify(reduxAnimal) !== JSON.stringify(sliderAnimal)
-        ) {
-          hasChanges = true;
-          return reduxAnimal;
-        }
-        return sliderAnimal;
-      });
-
-      return hasChanges ? updatedSlider.slice(0, 5) : currentSlider;
-    });
-  }, [animals]);
-
-  // 4. გაყიდვებით ჩანაცვლების ლოგიკა (მკაცრად მაქსიმუმ 5 ცხოველის ფარგლებში)
+  // 4. მთავარი ლოგიკა: სლაიდერის ID-ების მართვა (გამრავლებული ეფექტები გაერთიანდა)
   useEffect(() => {
     if (animals.length === 0) return;
 
     const popularAnimals = animals.filter((a) => a.isPopular);
-    const sliderIds = new Set(sliderAnimals.map((a) => a.id));
-    const outsideAnimals = popularAnimals.filter((a) => !sliderIds.has(a.id));
 
-    // თუ სლაიდერში 5-ზე ნაკლებია -> შევავსოთ 5-მდე
-    if (sliderAnimals.length < 5 && outsideAnimals.length > 0) {
-      const neededCount = 5 - sliderAnimals.length;
-      const animalsToAdd = outsideAnimals.slice(0, neededCount);
-      setSliderAnimals((prev) => [...prev, ...animalsToAdd].slice(0, 5));
-      return;
-    }
-
-    if (sliderAnimals.length === 0 || outsideAnimals.length === 0) return;
-
-    // იპოვე სლაიდერის გარეთ ყველაზე მეტად გაყიდული
-    let topOutsideAnimal: Animal | null = null;
-    let topOutsideSales = -1;
-
-    for (const animal of outsideAnimals) {
-      const currentSales = salesMap[animal.id] ?? 0;
-      if (currentSales > topOutsideSales) {
-        topOutsideSales = currentSales;
-        topOutsideAnimal = animal;
+    setSliderAnimalIds((currentIds) => {
+      // 1) პირველადი ინიციალიზაცია (თუ სლაიდერი ცარიელია)
+      if (currentIds.length === 0) {
+        return popularAnimals.slice(0, 5).map((a) => a.id);
       }
-    }
 
-    if (!topOutsideAnimal || topOutsideSales <= 0) return;
+      // 2) ამოვიღოთ ის ID-ები, რომლებიც აღარ არიან პოპულარულები Redux-ში
+      const validCurrentIds = currentIds.filter((id) => {
+        const animal = animals.find((a) => a.id === id);
+        return animal && animal.isPopular;
+      });
 
-    // იპოვე სლაიდერის შიგნით ყველაზე ნაკლებად გაყიდული
-    let minIndex = 0;
-    let minSales = salesMap[sliderAnimals[0].id] ?? 0;
+      // 3) თუ 5-ზე ნაკლებია, შევავსოთ გარეთა პოპულარული ცხოველებით
+      const currentSet = new Set(validCurrentIds);
+      const outsideAnimals = popularAnimals.filter(
+        (a) => !currentSet.has(a.id),
+      );
 
-    for (let i = 1; i < sliderAnimals.length; i++) {
-      const currentSales = salesMap[sliderAnimals[i].id] ?? 0;
-      if (currentSales < minSales) {
-        minSales = currentSales;
-        minIndex = i;
+      if (validCurrentIds.length < 5 && outsideAnimals.length > 0) {
+        const needed = 5 - validCurrentIds.length;
+        const toAdd = outsideAnimals.slice(0, needed).map((a) => a.id);
+        return [...validCurrentIds, ...toAdd];
       }
-    }
 
-    // ჩანაცვლება: თუ გარეთას მეტი გაყიდვა აქვს, ჩაანაცვლე შიგნითა ყველაზე ნაკლები
-    if (topOutsideSales > minSales) {
-      const nextSlider = [...sliderAnimals];
-      nextSlider[minIndex] = topOutsideAnimal;
-      setSliderAnimals(nextSlider.slice(0, 5)); // ყოველთვის 5 ელემენტი!
-    }
-  }, [salesMap, animals, sliderAnimals]);
+      // 4) გაყიდვებით ჩანაცვლება (თუ სლაიდერი შევსებულია 5 ელემენტით)
+      if (validCurrentIds.length === 5 && outsideAnimals.length > 0) {
+        // იპოვე გარეთა ყველაზე მეტად გაყიდული
+        let topOutsideAnimal: Animal | null = null;
+        let topOutsideSales = -1;
+
+        for (const animal of outsideAnimals) {
+          const currentSales = salesMap[animal.id] ?? 0;
+          if (currentSales > topOutsideSales) {
+            topOutsideSales = currentSales;
+            topOutsideAnimal = animal;
+          }
+        }
+
+        // იპოვე სლაიდერის შიგნით ყველაზე ნაკლებად გაყიდული
+        if (topOutsideAnimal && topOutsideSales > 0) {
+          let minIndex = 0;
+          let minSales = salesMap[validCurrentIds[0]] ?? 0;
+
+          for (let i = 1; i < validCurrentIds.length; i++) {
+            const currentSales = salesMap[validCurrentIds[i]] ?? 0;
+            if (currentSales < minSales) {
+              minSales = currentSales;
+              minIndex = i;
+            }
+          }
+
+          // თუ გარეთას მეტი გაყიდვა აქვს, ჩაანაცვლე შიგნითა
+          if (topOutsideSales > minSales) {
+            const nextIds = [...validCurrentIds];
+            nextIds[minIndex] = topOutsideAnimal.id;
+            return nextIds;
+          }
+        }
+      }
+
+      return validCurrentIds;
+    });
+  }, [animals, salesMap]);
+
+  // Redux-იდან იღებს სლაიდერის ცხოველების აქტუალურ ობიექტებს
+  const sliderAnimals = sliderAnimalIds
+    .map((id) => animals.find((a) => a.id === id))
+    .filter((a): a is Animal => Boolean(a));
 
   useEffect(() => {
     swiperRef.current?.update();
@@ -288,7 +251,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
           className={styles.swiper}
           spaceBetween={24}
           slidesPerView={1}
-          loop={false} // 👈 ეთითება false, რომ უსასრულოდ არ იტრიალოს
+          loop={false}
           observer
           observeParents
           onSwiper={(swiper) => {
