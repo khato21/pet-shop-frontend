@@ -60,10 +60,10 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   } = useAppSelector((state) => state.animalWithCategories);
 
   useEffect(() => {
-    dispatch(getAnimals());
+    dispatch(getAnimals(true));
     dispatch(getCategories());
     dispatch(getAnimalWithCategories());
-    dispatch(getSales());
+    dispatch(getSales(true));
   }, [dispatch]);
 
   useEffect(() => {

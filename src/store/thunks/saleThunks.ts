@@ -51,26 +51,14 @@ export const getSales = createAsyncThunk<
   Sale[],
   boolean | undefined,
   { state: RootState }
->(
-  "sales/getSales",
-  async () => {
-    const response = await get<SaleApiResponse[]>(SALES_URL);
-    if (!Array.isArray(response)) return [];
+>("sales/getSales", async () => {
+  const response = await get<SaleApiResponse[]>(SALES_URL);
+  if (!Array.isArray(response)) return [];
 
-    return response
-      .filter((item) => item && item.data)
-      .map((sale) => ({
-        animalId: sale.data.animalId,
-        quantity: sale.data.quantity,
-      }));
-  },
-  {
-    condition: (forceRefresh = false, { getState }) => {
-      const { sales } = getState();
-      if (sales.loading) return false;
-      if (forceRefresh) return true;
-      if (sales.sales.length > 0) return false; // 💡 თუ მონაცემები უკვე Redux-შია, აღარ გააგზავნოს
-      return true;
-    },
-  },
-);
+  return response
+    .filter((item) => item && item.data)
+    .map((sale) => ({
+      animalId: sale.data.animalId,
+      quantity: sale.data.quantity,
+    }));
+});
