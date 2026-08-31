@@ -34,7 +34,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   const dispatch = useAppDispatch();
   const swiperRef = useRef<SwiperInstance | null>(null);
 
-  // სლაიდერში ვინახავთ მხოლოდ ID-ების მასივს (მაქსიმუმ 5), რათა State ყოველთვის Redux-თან იყოს სინქრონში
   const [sliderAnimalIds, setSliderAnimalIds] = useState<string[]>([]);
   const [salesMap, setSalesMap] = useState<Record<string, number>>({});
 
@@ -44,7 +43,9 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     error: animalsError,
   } = useAppSelector((state) => state.animals);
 
-  const { sales } = useAppSelector((state) => state.sales);
+  const { sales, loading: salesLoading } = useAppSelector(
+    (state) => state.sales,
+  );
 
   const {
     categories,
@@ -58,7 +59,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     error: relationsError,
   } = useAppSelector((state) => state.animalWithCategories);
 
-  // 1. პირველადი ჩატვირთვა
   useEffect(() => {
     dispatch(getAnimals());
     dispatch(getCategories());
@@ -66,7 +66,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     dispatch(getSales());
   }, [dispatch]);
 
-  // 2. salesMap-ის შევსება
   useEffect(() => {
     if (!sales) return;
 
@@ -80,7 +79,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSalesMap(map);
   }, [sales]);
 
-  // 3. WebSocket Handler
   const handleWebSocketMessage = useCallback(
     async (message: WebSocketMessage) => {
       if (
@@ -94,7 +92,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             getAnimalById(message.id),
           ).unwrap();
 
-          // თუ ცხოველს მოეხსნა პოპულარობა (isPopular: false), ამოვიღოთ სლაიდერიდან
           if (!updatedAnimal.isPopular) {
             setSliderAnimalIds((prev) =>
               prev.filter((id) => id !== updatedAnimal.id),
@@ -136,27 +133,25 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   useWebSocket(handleWebSocketMessage);
 
-  // 4. მთავარი ლოგიკა: სლაიდერის ID-ების მართვა (გამრავლებული ეფექტები გაერთიანდა)
   useEffect(() => {
-    if (animals.length === 0) return;
+    if (animals.length === 0 || !sales) return;
 
-    const popularAnimals = animals.filter((a) => a.isPopular);
+    const sortedPopularAnimals = [...animals]
+      .filter((a) => a.isPopular)
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     setSliderAnimalIds((currentIds) => {
-      // 1) პირველადი ინიციალიზაცია (თუ სლაიდერი ცარიელია)
       if (currentIds.length === 0) {
-        return popularAnimals.slice(0, 5).map((a) => a.id);
+        return sortedPopularAnimals.slice(0, 5).map((a) => a.id);
       }
 
-      // 2) ამოვიღოთ ის ID-ები, რომლებიც აღარ არიან პოპულარულები Redux-ში
       const validCurrentIds = currentIds.filter((id) => {
         const animal = animals.find((a) => a.id === id);
         return animal && animal.isPopular;
       });
 
-      // 3) თუ 5-ზე ნაკლებია, შევავსოთ გარეთა პოპულარული ცხოველებით
       const currentSet = new Set(validCurrentIds);
-      const outsideAnimals = popularAnimals.filter(
+      const outsideAnimals = sortedPopularAnimals.filter(
         (a) => !currentSet.has(a.id),
       );
 
@@ -166,9 +161,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
         return [...validCurrentIds, ...toAdd];
       }
 
-      // 4) გაყიდვებით ჩანაცვლება (თუ სლაიდერი შევსებულია 5 ელემენტით)
       if (validCurrentIds.length === 5 && outsideAnimals.length > 0) {
-        // იპოვე გარეთა ყველაზე მეტად გაყიდული
         let topOutsideAnimal: Animal | null = null;
         let topOutsideSales = -1;
 
@@ -180,7 +173,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
           }
         }
 
-        // იპოვე სლაიდერის შიგნით ყველაზე ნაკლებად გაყიდული
         if (topOutsideAnimal && topOutsideSales > 0) {
           let minIndex = 0;
           let minSales = salesMap[validCurrentIds[0]] ?? 0;
@@ -193,7 +185,6 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             }
           }
 
-          // თუ გარეთას მეტი გაყიდვა აქვს, ჩაანაცვლე შიგნითა
           if (topOutsideSales > minSales) {
             const nextIds = [...validCurrentIds];
             nextIds[minIndex] = topOutsideAnimal.id;
@@ -204,9 +195,8 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
       return validCurrentIds;
     });
-  }, [animals, salesMap]);
+  }, [animals, sales, salesMap]);
 
-  // Redux-იდან იღებს სლაიდერის ცხოველების აქტუალურ ობიექტებს
   const sliderAnimals = sliderAnimalIds
     .map((id) => animals.find((a) => a.id === id))
     .filter((a): a is Animal => Boolean(a));
@@ -215,7 +205,8 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     swiperRef.current?.update();
   }, [sliderAnimals]);
 
-  const loading = animalsLoading || categoriesLoading || relationsLoading;
+  const loading =
+    animalsLoading || categoriesLoading || relationsLoading || salesLoading;
   const error = animalsError || categoriesError || relationsError;
 
   if (loading && animals.length === 0) {
