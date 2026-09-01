@@ -11,12 +11,13 @@ import AnimalCard from "../AnimalCard/AnimalCard";
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
-import { getAnimals, getAnimalById } from "../../store/thunks/animalThunks";
+import { getAnimals } from "../../store/thunks/animalThunks";
 import { getCategories } from "../../store/thunks/categoryThunks";
 import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryThunks";
 import { getSales } from "../../store/thunks/saleThunks";
 
 import type { Animal } from "../../interfaces/animal.interface";
+import type { Sale } from "../../interfaces/sale.interface";
 import type { WebSocketMessage } from "../../interfaces/websocket.interface";
 
 import styles from "./PopularAnimals.module.css";
@@ -29,6 +30,8 @@ interface SaleWebSocketData {
   animalId?: string;
   quantity?: number;
 }
+
+const POPULAR_ANIMALS_STORAGE_KEY = "popularAnimalsSliderIds";
 
 const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   const dispatch = useAppDispatch();
@@ -62,13 +65,22 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      await Promise.all([
+      const [, salesData] = await Promise.all([
         dispatch(getAnimals()),
-        dispatch(getSales()),
+        dispatch(getSales()).unwrap(),
         dispatch(getCategories()),
         dispatch(getAnimalWithCategories()),
       ]);
 
+      const map: Record<string, number> = {};
+
+      (salesData as Sale[]).forEach((sale) => {
+        if (sale.animalId) {
+          map[sale.animalId] = (map[sale.animalId] ?? 0) + (sale.quantity || 1);
+        }
+      });
+
+      setSalesMap(map);
       setInitialDataReady(true);
     };
 
@@ -76,62 +88,38 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (!sales) return;
+    if (!sales || sales.length === 0) return;
 
     const map: Record<string, number> = {};
 
-    sales.forEach((s) => {
-      if (s.animalId) {
-        map[s.animalId] = (map[s.animalId] ?? 0) + (s.quantity || 1);
+    sales.forEach((sale) => {
+      if (sale.animalId) {
+        map[sale.animalId] = (map[sale.animalId] ?? 0) + (sale.quantity || 1);
       }
     });
 
     setSalesMap(map);
   }, [sales]);
 
-  const handleWebSocketMessage = useCallback(
-    async (message: WebSocketMessage) => {
-      if (
-        message.type === "RESOURCE_CHANGED" &&
-        message.resource === "animals" &&
-        message.action === "UPDATE" &&
-        message.id
-      ) {
-        try {
-          const updatedAnimal = await dispatch(
-            getAnimalById(message.id),
-          ).unwrap();
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    const rawMessage = message as any;
 
-          if (!updatedAnimal.isPopular) {
-            setSliderAnimalIds((prev) =>
-              prev.filter((id) => id !== updatedAnimal.id),
-            );
-          }
-        } catch (error) {
-          console.error(
-            "Failed to update popular animal via WebSocket:",
-            error,
-          );
-        }
+    const resource =
+      "resource" in message
+        ? message.resource
+        : (rawMessage.resource ?? rawMessage.payload?.resource);
 
-        return;
-      }
+    const action =
+      "action" in message
+        ? message.action
+        : (rawMessage.action ?? rawMessage.payload?.action);
 
-      if (
-        message.type !== "RESOURCE_CHANGED" ||
-        message.resource === "sales" ||
-        message.action === "CREATE"
-      ) {
-        return;
-      }
-
-      const rawMessage = message as any;
-
+    if (resource === "sales" && action === "CREATE") {
       const saleData: SaleWebSocketData | undefined =
         rawMessage.data ?? rawMessage.payload?.data;
 
       const animalId = saleData?.animalId;
-      const quantity = saleData?.quantity ?? 1;
+      const quantity = Number(saleData?.quantity) || 1;
 
       if (!animalId) return;
 
@@ -139,86 +127,121 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
         ...prev,
         [animalId]: (prev[animalId] ?? 0) + quantity,
       }));
-    },
-    [dispatch],
-  );
+    }
+  }, []);
 
   useWebSocket(handleWebSocketMessage);
 
   useEffect(() => {
     if (!initialDataReady || animals.length === 0 || salesLoading) return;
 
-    const popularAnimals = animals.filter((a) => a.isPopular);
+    const popularAnimals = animals.filter((animal) => animal.isPopular);
 
     setSliderAnimalIds((currentIds) => {
-      if (currentIds.length === 0) {
-        const sortedBySales = [...popularAnimals].sort(
-          (a, b) => (salesMap[b.id] ?? 0) - (salesMap[a.id] ?? 0),
-        );
-        return sortedBySales.slice(0, 5).map((a) => a.id);
+      let nextIds = currentIds;
+
+      if (nextIds.length === 0) {
+        const savedIds = localStorage.getItem(POPULAR_ANIMALS_STORAGE_KEY);
+
+        if (savedIds) {
+          try {
+            const parsedIds: unknown = JSON.parse(savedIds);
+
+            if (Array.isArray(parsedIds)) {
+              const validSavedIds = parsedIds.filter(
+                (id): id is string =>
+                  typeof id === "string" &&
+                  popularAnimals.some((animal) => animal.id === id),
+              );
+
+              if (validSavedIds.length === 5) {
+                nextIds = validSavedIds;
+              }
+            }
+          } catch {
+            localStorage.removeItem(POPULAR_ANIMALS_STORAGE_KEY);
+          }
+        }
+
+        if (nextIds.length === 0) {
+          nextIds = popularAnimals.slice(0, 5).map((animal) => animal.id);
+        }
       }
 
-      const validCurrentIds = currentIds.filter((id) => {
-        const animal = animals.find((a) => a.id === id);
+      const validCurrentIds = nextIds.filter((id) => {
+        const animal = animals.find((item) => item.id === id);
+
         return animal && animal.isPopular;
       });
 
       const currentSet = new Set(validCurrentIds);
+
       const outsideAnimals = popularAnimals.filter(
-        (a) => !currentSet.has(a.id),
+        (animal) => !currentSet.has(animal.id),
       );
 
       if (validCurrentIds.length < 5 && outsideAnimals.length > 0) {
         const neededCount = 5 - validCurrentIds.length;
+
         const animalsToAdd = [...outsideAnimals]
           .sort((a, b) => (salesMap[b.id] ?? 0) - (salesMap[a.id] ?? 0))
           .slice(0, neededCount)
-          .map((a) => a.id);
+          .map((animal) => animal.id);
 
-        return [...validCurrentIds, ...animalsToAdd];
-      }
-
-      if (validCurrentIds.length === 5 && outsideAnimals.length > 0) {
+        nextIds = [...validCurrentIds, ...animalsToAdd];
+      } else if (validCurrentIds.length === 5 && outsideAnimals.length > 0) {
         let topOutsideAnimal: Animal | null = null;
         let topOutsideSales = -1;
 
         for (const animal of outsideAnimals) {
           const currentSales = salesMap[animal.id] ?? 0;
+
           if (currentSales > topOutsideSales) {
             topOutsideSales = currentSales;
             topOutsideAnimal = animal;
           }
         }
 
-        if (!topOutsideAnimal || topOutsideSales <= 0) {
-          return validCurrentIds;
-        }
+        if (topOutsideAnimal && topOutsideSales > 0) {
+          let minIndex = 0;
+          let minSales = salesMap[validCurrentIds[0]] ?? 0;
 
-        let minIndex = 0;
-        let minSales = salesMap[validCurrentIds[0]] ?? 0;
+          for (let i = 1; i < validCurrentIds.length; i++) {
+            const currentSales = salesMap[validCurrentIds[i]] ?? 0;
 
-        for (let i = 1; i < validCurrentIds.length; i++) {
-          const currentSales = salesMap[validCurrentIds[i]] ?? 0;
-          if (currentSales < minSales) {
-            minSales = currentSales;
-            minIndex = i;
+            if (currentSales < minSales) {
+              minSales = currentSales;
+              minIndex = i;
+            }
           }
-        }
 
-        if (topOutsideSales > minSales) {
-          const nextIds = [...validCurrentIds];
-          nextIds[minIndex] = topOutsideAnimal.id;
-          return nextIds;
+          if (topOutsideSales > minSales) {
+            nextIds = [...validCurrentIds];
+            nextIds[minIndex] = topOutsideAnimal.id;
+          } else {
+            nextIds = validCurrentIds;
+          }
+        } else {
+          nextIds = validCurrentIds;
         }
+      } else {
+        nextIds = validCurrentIds;
       }
 
-      return validCurrentIds;
+      if (nextIds.length === 5) {
+        localStorage.setItem(
+          POPULAR_ANIMALS_STORAGE_KEY,
+          JSON.stringify(nextIds),
+        );
+      }
+
+      return nextIds;
     });
   }, [initialDataReady, animals, salesMap, salesLoading]);
 
   const sliderAnimals = sliderAnimalIds
-    .map((id) => animals.find((a) => a.id === id))
-    .filter((a): a is Animal => Boolean(a));
+    .map((id) => animals.find((animal) => animal.id === id))
+    .filter((animal): animal is Animal => Boolean(animal));
 
   useEffect(() => {
     swiperRef.current?.update();
@@ -273,7 +296,7 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
             1100: { slidesPerView: 4 },
           }}
         >
-          {sliderAnimals.map((animal) => {
+          {sliderAnimals.slice(0, 5).map((animal) => {
             const relatedCategoryIds = animalWithCategories
               .filter((relation) => relation.animal_id === animal.id)
               .map((relation) => relation.category_id);

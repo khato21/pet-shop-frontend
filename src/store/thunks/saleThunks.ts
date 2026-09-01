@@ -37,7 +37,7 @@ export const createSale = createAsyncThunk<Sale, Sale>(
             },
           }),
         );
-        setTimeout(() => socket.close(), 100);
+        setTimeout(() => socket.close(), 200);
       };
     } catch (err) {
       console.error("WS Error:", err);

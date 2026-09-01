@@ -1,5 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
+
 import type { SaleState } from "../../interfaces/sale-state.interface";
+
 import { getSales, createSale } from "../thunks/saleThunks";
 
 const initialState: SaleState = {
@@ -26,8 +28,11 @@ const salesSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? "Failed to get sales";
       })
-      .addCase(createSale.fulfilled, (state, action) => {
-        state.sales.push(action.payload);
+      .addCase(createSale.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(createSale.rejected, (state, action) => {
+        state.error = action.error.message ?? "Failed to create sale";
       });
   },
 });

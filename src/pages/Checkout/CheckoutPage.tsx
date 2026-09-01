@@ -6,7 +6,6 @@ import { toast } from "react-toastify";
 import type { RootState } from "../../store";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
-import { useWebSocket } from "../../hooks/useWebSocket";
 
 import { clearCart } from "../../store/slices/cartSlice";
 import { createSale } from "../../store/thunks/saleThunks";
@@ -24,8 +23,6 @@ const CheckoutPage = () => {
   const cart = useAppSelector((state) => state.cart.cart);
 
   const { currency } = useSelector((state: RootState) => state.currency);
-
-  const { sendMessage } = useWebSocket(() => {});
 
   const totalPrice = cart.reduce((total, item) => {
     const price =
@@ -78,23 +75,16 @@ const CheckoutPage = () => {
           }),
         ).unwrap();
       }
+
       for (const item of cart) {
-        const createdSale = await dispatch(
+        await dispatch(
           createSale({
             animalId: item.animal.id,
             quantity: item.quantity,
           }),
         ).unwrap();
-        sendMessage(
-          JSON.stringify({
-            type: "RESOURCE_CHANGED",
-            source: "SHOP",
-            action: "CREATE",
-            resource: "sales",
-            data: createdSale,
-          }),
-        );
       }
+
       dispatch(clearCart());
 
       toast.success("Order placed successfully!");
