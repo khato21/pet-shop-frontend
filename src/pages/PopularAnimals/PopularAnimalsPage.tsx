@@ -109,7 +109,13 @@ const PopularAnimalsPage = () => {
 
   const error = animalsError || categoriesError || relationsError;
 
-  const popularAnimals = animals.filter((animal) => animal.isPopular);
+  const popularAnimals = [...animals]
+    .filter((animal) => animal.isPopular)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? 0).getTime() -
+        new Date(a.createdAt ?? 0).getTime(),
+    );
 
   if (loading && animals.length === 0) {
     return <p>Loading popular animals...</p>;
