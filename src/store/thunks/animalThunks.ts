@@ -32,7 +32,7 @@ const notifyAnimalUpdated = (id: string): void => {
     socket.send(
       JSON.stringify({
         type: "RESOURCE_CHANGED",
-        source: "SHOP",
+        source: "ADMIN",
         action: "UPDATE",
         resource: "animals",
         id,
