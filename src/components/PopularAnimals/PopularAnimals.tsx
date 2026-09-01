@@ -11,7 +11,7 @@ import AnimalCard from "../AnimalCard/AnimalCard";
 import { useAppDispatch, useAppSelector } from "../../hooks/hooks";
 import { useWebSocket } from "../../hooks/useWebSocket";
 
-import { getAnimals } from "../../store/thunks/animalThunks";
+import { getAnimals, getAnimalById } from "../../store/thunks/animalThunks";
 import { getCategories } from "../../store/thunks/categoryThunks";
 import { getAnimalWithCategories } from "../../store/thunks/animalWithCategoryThunks";
 import { getSales } from "../../store/thunks/saleThunks";
@@ -101,34 +101,69 @@ const PopularAnimals = ({ showViewAll = false }: PopularAnimalsProps) => {
     setSalesMap(map);
   }, [sales]);
 
-  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
-    const rawMessage = message as any;
+  const handleWebSocketMessage = useCallback(
+    async (message: WebSocketMessage) => {
+      const rawMessage = message as any;
 
-    const resource =
-      "resource" in message
-        ? message.resource
-        : (rawMessage.resource ?? rawMessage.payload?.resource);
+      const resource =
+        "resource" in message
+          ? message.resource
+          : (rawMessage.resource ?? rawMessage.payload?.resource);
 
-    const action =
-      "action" in message
-        ? message.action
-        : (rawMessage.action ?? rawMessage.payload?.action);
+      const action =
+        "action" in message
+          ? message.action
+          : (rawMessage.action ?? rawMessage.payload?.action);
 
-    if (resource === "sales" && action === "CREATE") {
-      const saleData: SaleWebSocketData | undefined =
-        rawMessage.data ?? rawMessage.payload?.data;
+      if (resource === "sales" && action === "CREATE") {
+        const saleData: SaleWebSocketData | undefined =
+          rawMessage.data ?? rawMessage.payload?.data;
 
-      const animalId = saleData?.animalId;
-      const quantity = Number(saleData?.quantity) || 1;
+        const animalId = saleData?.animalId;
+        const quantity = Number(saleData?.quantity) || 1;
 
-      if (!animalId) return;
+        if (!animalId) return;
 
-      setSalesMap((prev) => ({
-        ...prev,
-        [animalId]: (prev[animalId] ?? 0) + quantity,
-      }));
-    }
-  }, []);
+        setSalesMap((prev) => ({
+          ...prev,
+          [animalId]: (prev[animalId] ?? 0) + quantity,
+        }));
+
+        return;
+      }
+
+      if (
+        message.type === "RESOURCE_CHANGED" &&
+        message.source === "ADMIN" &&
+        message.resource === "animals" &&
+        message.action === "UPDATE" &&
+        message.id
+      ) {
+        console.log("🔥 Popular Animals changed via WebSocket:", message.id);
+
+        try {
+          const updatedAnimal = await dispatch(
+            getAnimalById(message.id),
+          ).unwrap();
+
+          console.log(
+            "🔥 Popular Animal updated:",
+            updatedAnimal.name,
+            "Stock:",
+            updatedAnimal.stock,
+            "Popular:",
+            updatedAnimal.isPopular,
+          );
+        } catch (error) {
+          console.error(
+            "Failed to update popular animal via WebSocket:",
+            error,
+          );
+        }
+      }
+    },
+    [dispatch],
+  );
 
   useWebSocket(handleWebSocketMessage);
 
