@@ -137,6 +137,8 @@ const AnimalDetailsPage = () => {
             src={animal.imageUrl}
             alt={animal.name}
           />
+
+          {animal.isPopular && <span className={styles.popular}>Popular</span>}
         </div>
 
         <div className={styles.content}>
